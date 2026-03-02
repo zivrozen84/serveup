@@ -12,6 +12,8 @@ export const restaurantSchema = z.object({
   logoUrl: z.string().optional(),
   bannerUrl: z.string().optional(),
   backgroundUrl: z.string().optional(),
+  frameUrl: z.string().optional(),
+  frameVariants: z.string().optional(),
 });
 
 export type RestaurantInput = z.infer<typeof restaurantSchema>;

@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 
-const DEFAULT_FRAMES = ["/frames/1.png", "/frames/2.png"];
+const DEFAULT_FRAMES = ["/frames/1.png", "/frames/2.png", "/frames/3.png"];
+const NO_FRAME = "";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface RestaurantFormProps {
+  onFrameChange?: (url: string) => void;
   initialData?: {
     id?: number;
     name: string;
@@ -27,7 +29,7 @@ interface RestaurantFormProps {
   };
 }
 
-export function RestaurantForm({ initialData }: RestaurantFormProps) {
+export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormProps) {
   const router = useRouter();
   const [name, setName] = useState(initialData?.name ?? "");
   const [slug, setSlug] = useState(initialData?.slug ?? "");
@@ -38,7 +40,7 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor ?? "#c2410c");
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
   const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl ?? "");
-  const [frameUrl, setFrameUrl] = useState(initialData?.frameUrl ?? DEFAULT_FRAMES[0]);
+  const [frameUrl, setFrameUrl] = useState(initialData?.frameUrl ?? NO_FRAME);
   const [frameVariants, setFrameVariants] = useState<string[]>(() => {
     try {
       const v = initialData?.frameVariants;
@@ -51,6 +53,11 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
+  const [savingFrame, setSavingFrame] = useState(false);
+
+  useEffect(() => {
+    if (onFrameChange) onFrameChange(frameUrl || NO_FRAME);
+  }, [frameUrl, onFrameChange]);
 
   useEffect(() => {
     if (!initialData && name) {
@@ -75,11 +82,28 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
         if (field === "bannerUrl") setBannerUrl(data.url);
         if (field === "backgroundUrl") setBackgroundUrl(data.url);
         if (field === "frame") {
-          setFrameVariants((p) => {
-            const next = [...p, data.url];
-            if (p.length === 0) setFrameUrl(data.url);
-            return next.slice(-10);
-          });
+          const nextVariants = [...frameVariants, data.url].slice(-10);
+          setFrameVariants(nextVariants);
+          if (frameVariants.length === 0 && initialData?.id) {
+            setFrameUrl(data.url);
+            onFrameChange?.(data.url);
+            setSavingFrame(true);
+            try {
+              const patchRes = await fetch(`/api/admin/restaurants/${initialData.id}/frame`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ frameUrl: data.url, frameVariants: JSON.stringify(nextVariants) }),
+              });
+              if (patchRes.ok) router.refresh();
+              else setError((p) => ({ ...p, frame: ["שגיאה בשמירת מסגרת"] }));
+            } catch {
+              setError((p) => ({ ...p, frame: ["שגיאה בשמירת מסגרת"] }));
+            }
+            setSavingFrame(false);
+          } else if (frameVariants.length === 0) {
+            setFrameUrl(data.url);
+            onFrameChange?.(data.url);
+          }
         }
       } else setError((p) => ({ ...p, [field]: [data.error || "שגיאה"] }));
     } catch {
@@ -88,37 +112,74 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
     setUploading(false);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError({});
+  async function saveRestaurant(payload: Record<string, unknown>) {
     const url = initialData?.id ? `/api/admin/restaurants/${initialData.id}` : "/api/admin/restaurants";
     const method = initialData?.id ? "PUT" : "POST";
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        slug,
-        ownerName,
-        ownerEmail,
-        ownerPhone,
-        city,
-        primaryColor,
-        isActive,
-        ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
-        bannerUrl: bannerUrl || undefined,
-        frameUrl: frameUrl || undefined,
-        frameVariants: frameVariants.length ? JSON.stringify(frameVariants) : undefined,
-        backgroundUrl: backgroundUrl || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
+    if (res.ok) router.refresh();
+    return { ok: res.ok, data };
+  }
+
+  async function handleFrameSelect(url: string) {
+    setFrameUrl(url);
+    onFrameChange?.(url);
+    if (!initialData?.id) return;
+    setSavingFrame(true);
+    setError((p) => ({ ...p, frame: [] }));
+    try {
+      const res = await fetch(`/api/admin/restaurants/${initialData.id}/frame`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          frameUrl: url,
+          ...(frameVariants.length > 0 && { frameVariants: JSON.stringify(frameVariants) }),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const errMsg = data?.message || data?.error || `שגיאה ${res.status}`;
+        setError((p) => ({ ...p, frame: [errMsg] }));
+      }
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : "שגיאה בשמירת מסגרת";
+      setError((p) => ({ ...p, frame: [errMsg] }));
+    }
+    setSavingFrame(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError({});
+    const { ok, data } = await saveRestaurant({
+      name,
+      slug,
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      city,
+      primaryColor,
+      isActive,
+      ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
+      bannerUrl: bannerUrl || undefined,
+      frameUrl: frameUrl || undefined,
+      frameVariants: frameVariants.length ? JSON.stringify(frameVariants) : undefined,
+      backgroundUrl: backgroundUrl || undefined,
+    });
     setSaving(false);
-    if (res.ok) {
-      router.refresh();
-    } else {
-      setError(data.error || { form: [data.message || "שגיאה"] });
+    if (!ok) {
+      const err = data?.error;
+      const normalized: Record<string, string[]> = err?.fieldErrors
+        ? { ...err.fieldErrors, ...(err.formErrors?.length ? { form: err.formErrors } : {}) }
+        : { form: [typeof err === "string" ? err : data?.message || "שגיאה"] };
+      setError(normalized);
     }
   }
 
@@ -127,7 +188,7 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
       {Object.keys(error).length > 0 && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {Object.entries(error).map(([k, v]) => (
-            <div key={k}>{Array.isArray(v) ? v.join(", ") : v}</div>
+            <div key={k}>{Array.isArray(v) ? v.join(", ") : (typeof v === "object" ? JSON.stringify(v) : String(v ?? ""))}</div>
           ))}
         </div>
       )}
@@ -233,13 +294,24 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
               {uploading ? "מעלה..." : "העלה"}
             </span>
           </label>
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap items-center">
+            <button
+              type="button"
+              disabled={savingFrame}
+              onClick={() => handleFrameSelect(NO_FRAME)}
+              className={`px-2 py-1 text-xs rounded border-2 shrink-0 transition-opacity hover:opacity-90 disabled:opacity-50 ${
+                !frameUrl ? "border-[#37C27D]" : "border-white/20"
+              }`}
+            >
+              ללא
+            </button>
             {[...DEFAULT_FRAMES, ...frameVariants].map((url) => (
               <button
                 key={url}
                 type="button"
-                onClick={() => setFrameUrl(url)}
-                className={`w-6 h-6 rounded overflow-hidden border-2 shrink-0 transition-opacity hover:opacity-90 ${
+                disabled={savingFrame}
+                onClick={() => handleFrameSelect(url)}
+                className={`w-6 h-6 rounded overflow-hidden border-2 shrink-0 transition-opacity hover:opacity-90 disabled:opacity-50 ${
                   frameUrl === url ? "border-[#37C27D]" : "border-white/20"
                 }`}
               >
@@ -248,7 +320,8 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
             ))}
           </div>
         </div>
-        <p className="text-xs text-white/50 mt-1">לחץ על תמונה לבחירה</p>
+        <p className="text-xs text-white/50 mt-1">לחץ על תמונה לבחירה – נשמר אוטומטית</p>
+        {error.frame && <p className="text-sm text-destructive mt-1">{error.frame[0]}</p>}
       </div>
       <div>
         <Label>רקע תפריט</Label>

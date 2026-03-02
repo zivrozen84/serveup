@@ -41,6 +41,8 @@ export async function POST(request: Request) {
       logoUrl: data.logoUrl ?? null,
       bannerUrl: data.bannerUrl ?? null,
       backgroundUrl: data.backgroundUrl ?? null,
+      frameUrl: data.frameUrl ?? null,
+      frameVariants: data.frameVariants ?? null,
     },
   });
   return NextResponse.json(restaurant);

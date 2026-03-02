@@ -28,6 +28,7 @@ export default async function RestaurantMenuPage({
         logoUrl: restaurant.logoUrl,
         bannerUrl: restaurant.bannerUrl,
         backgroundUrl: restaurant.backgroundUrl,
+        frameUrl: restaurant.frameUrl,
         primaryColor: restaurant.primaryColor,
       }}
       categories={restaurant.categories.map((c) => ({

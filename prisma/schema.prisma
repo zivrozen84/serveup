@@ -50,6 +50,8 @@ model Restaurant {
   logoUrl       String?
   bannerUrl     String?
   backgroundUrl String?
+  frameUrl      String?
+  frameVariants String?
   primaryColor  String   @default("#000000")
   city          String
   isActive      Boolean  @default(true)

@@ -31,6 +31,7 @@ interface Restaurant {
   logoUrl: string | null;
   bannerUrl: string | null;
   backgroundUrl: string | null;
+  frameUrl: string | null;
   primaryColor: string;
 }
 
@@ -126,7 +127,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
               <button
                 key={cat.id}
                 onClick={() => setActiveCat(cat.id)}
-                className="shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-lg"
+                className="shrink-0 px-4 py-2 rounded-full text-base font-bold transition-colors shadow-lg"
                 style={{
                   backgroundColor: activeCat === cat.id ? primaryColor : "rgba(0,0,0,0.5)",
                   color: "white",
@@ -141,11 +142,11 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
           <div ref={scrollRef} className="pb-10 px-5 flex-1 pt-16">
             {categories.map((cat) => (
               <section key={cat.id} data-cat={cat.id} className="pt-6">
-                <h2 className="text-amber-200 text-sm font-semibold mb-4 px-1">{cat.name}</h2>
+                <h2 className="text-amber-200 text-lg font-bold mb-4 px-1">{cat.name}</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {(cat.dishes ?? []).map((d) => (
                     <div key={d.id} className="flex flex-col items-center">
-                      <div className="w-full aspect-square relative overflow-hidden bg-[#2d2926]">
+                      <div className="w-full aspect-square relative overflow-visible bg-[#2d2926]">
                         {d.imageUrl ? (
                           <img
                             src={d.imageUrl}
@@ -160,22 +161,24 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                             <span className="text-4xl text-white/50">?</span>
                           </div>
                         )}
-                        <div
-                          className="absolute inset-0 w-full h-full pointer-events-none"
-                          style={{
-                            backgroundImage: "url(/images/מסגרת.png)",
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            backgroundRepeat: "no-repeat",
-                          }}
-                        />
+                        {restaurant.frameUrl && (
+                          <div
+                            className="absolute inset-0 w-full h-full pointer-events-none"
+                            style={{
+                              backgroundImage: `url(${restaurant.frameUrl})`,
+                              backgroundSize: "111% 111%",
+                              backgroundPosition: "center",
+                              backgroundRepeat: "no-repeat",
+                            }}
+                          />
+                        )}
                       </div>
                       <div className="w-full pt-2 text-center space-y-0.5">
                         <h3 className="font-semibold text-amber-100 text-sm leading-tight">{d.title}</h3>
                         {d.description && (
                           <p className="text-xs text-amber-200/80 line-clamp-2">{d.description}</p>
                         )}
-                        <p className="font-bold text-base text-amber-50 pt-0.5">₪{formatPrice(d.priceCents)}</p>
+                        <p className="font-bold text-base text-amber-50 -mt-1">₪{formatPrice(d.priceCents)}</p>
                       </div>
                     </div>
                   ))}

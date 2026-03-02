@@ -11,7 +11,8 @@ export async function GET(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const id = parseInt(params.id);
+  const { id: idParam } = await params;
+  const id = parseInt(idParam);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const restaurant = await prisma.restaurant.findUnique({
@@ -29,7 +30,8 @@ export async function PUT(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const id = parseInt(params.id);
+  const { id: idParam } = await params;
+  const id = parseInt(idParam);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const body = await request.json();
@@ -54,6 +56,33 @@ export async function PUT(
       logoUrl: data.logoUrl ?? null,
       bannerUrl: data.bannerUrl ?? null,
       backgroundUrl: data.backgroundUrl ?? null,
+      frameUrl: data.frameUrl ?? null,
+      frameVariants: data.frameVariants ?? null,
+    },
+  });
+  return NextResponse.json(restaurant);
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id: idParam } = await params;
+  const id = parseInt(idParam);
+  if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+
+  const body = await request.json();
+  const frameUrl = typeof body.frameUrl === "string" ? body.frameUrl : null;
+  const frameVariants = typeof body.frameVariants === "string" ? body.frameVariants : undefined;
+
+  const restaurant = await prisma.restaurant.update({
+    where: { id },
+    data: {
+      ...(frameUrl !== null && { frameUrl }),
+      ...(frameVariants !== undefined && { frameVariants }),
     },
   });
   return NextResponse.json(restaurant);
@@ -66,7 +95,8 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const id = parseInt(params.id);
+  const { id: idParam } = await params;
+  const id = parseInt(idParam);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   await prisma.restaurant.delete({ where: { id } });
