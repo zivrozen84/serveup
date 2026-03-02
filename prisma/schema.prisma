@@ -63,6 +63,7 @@ model Restaurant {
   city               String
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
+  whatsappPhoneNumberId String?  // מזהה המספר ב-WhatsApp Cloud API – לקישור בוט למסעדה
 
   tables     Table[]
   categories Category[]

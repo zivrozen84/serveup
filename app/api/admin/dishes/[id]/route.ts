@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { error as logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { dishSchema } from "@/lib/validation/menu";
 
@@ -53,7 +54,7 @@ export async function PUT(
     });
     return NextResponse.json(dish);
   } catch (e) {
-    console.error("Dish update error:", e);
+    logError("שגיאה בעדכון מנה:", e);
     return NextResponse.json({ error: "שגיאה בשמירה", message: "שגיאה בשמירה" }, { status: 500 });
   }
 }

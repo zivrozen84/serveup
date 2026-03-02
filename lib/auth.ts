@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import * as bcrypt from "bcryptjs";
 import { checkIpAllowed } from "./ip-check";
+import { warn } from "./logger";
 
 declare module "next-auth" {
   interface Session {
@@ -32,7 +33,10 @@ export const authOptions: NextAuthOptions = {
         const ip = (req?.headers?.["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
           (req?.headers?.["x-real-ip"] as string) ||
           "127.0.0.1";
-        if (!(await checkIpAllowed(ip))) return null;
+        if (!(await checkIpAllowed(ip))) {
+          warn("[התחברות] כניסה נדחתה – IP לא מורשה:", ip);
+          return null;
+        }
         const username = credentials?.username;
         const password = credentials?.password;
         if (!username || !password) return null;
