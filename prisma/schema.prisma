@@ -52,8 +52,12 @@ model Restaurant {
   backgroundUrl String?
   frameUrl      String?
   frameVariants String?
-  primaryColor  String   @default("#000000")
-  city          String
+  primaryColor     String   @default("#c2410c")
+  secondaryColor   String?  // כותרות קטגוריות
+  textColor        String?  // טקסט מנות
+  descriptionColor String?  // תיאור
+  priceColor       String?  // מחיר
+  city             String
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 

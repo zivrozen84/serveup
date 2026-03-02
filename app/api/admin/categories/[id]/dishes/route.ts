@@ -11,7 +11,8 @@ export async function POST(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const categoryId = parseInt(params.id);
+  const { id } = await params;
+  const categoryId = parseInt(id, 10);
   if (isNaN(categoryId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const body = await request.json();

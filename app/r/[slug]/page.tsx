@@ -30,6 +30,10 @@ export default async function RestaurantMenuPage({
         backgroundUrl: restaurant.backgroundUrl,
         frameUrl: restaurant.frameUrl,
         primaryColor: restaurant.primaryColor,
+        secondaryColor: restaurant.secondaryColor,
+        textColor: restaurant.textColor,
+        descriptionColor: restaurant.descriptionColor,
+        priceColor: restaurant.priceColor,
       }}
       categories={restaurant.categories.map((c) => ({
         id: c.id,

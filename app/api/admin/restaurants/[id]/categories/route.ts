@@ -11,7 +11,8 @@ export async function GET(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const restaurantId = parseInt(params.id);
+  const { id } = await params;
+  const restaurantId = parseInt(id, 10);
   if (isNaN(restaurantId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const categories = await prisma.category.findMany({
@@ -29,7 +30,8 @@ export async function POST(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const restaurantId = parseInt(params.id);
+  const { id } = await params;
+  const restaurantId = parseInt(id, 10);
   if (isNaN(restaurantId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const body = await request.json();

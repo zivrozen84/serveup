@@ -26,7 +26,7 @@ export async function PUT(
       ...(parsed.data.description !== undefined && { description: parsed.data.description }),
       ...(parsed.data.allergens !== undefined && { allergens: parsed.data.allergens }),
       ...(parsed.data.priceCents != null && { priceCents: parsed.data.priceCents }),
-      ...(parsed.data.imageUrl !== undefined && { imageUrl: parsed.data.imageUrl }),
+      ...(parsed.data.imageUrl !== undefined && { imageUrl: parsed.data.imageUrl ?? null }),
       ...(parsed.data.sortOrder != null && { sortOrder: parsed.data.sortOrder }),
     },
   });

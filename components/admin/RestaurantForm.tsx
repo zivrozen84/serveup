@@ -20,6 +20,10 @@ interface RestaurantFormProps {
     ownerPhone: string;
     city: string;
     primaryColor: string;
+    secondaryColor?: string | null;
+    textColor?: string | null;
+    descriptionColor?: string | null;
+    priceColor?: string | null;
     isActive: boolean;
     logoUrl?: string | null;
     bannerUrl?: string | null;
@@ -38,6 +42,10 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
   const [ownerPhone, setOwnerPhone] = useState(initialData?.ownerPhone ?? "");
   const [city, setCity] = useState(initialData?.city ?? "");
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor ?? "#c2410c");
+  const [secondaryColor, setSecondaryColor] = useState(initialData?.secondaryColor ?? "#fbbf24");
+  const [textColor, setTextColor] = useState(initialData?.textColor ?? "#fef3c7");
+  const [descriptionColor, setDescriptionColor] = useState(initialData?.descriptionColor ?? "#fde68a");
+  const [priceColor, setPriceColor] = useState(initialData?.priceColor ?? "#fffbeb");
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
   const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl ?? "");
   const [frameUrl, setFrameUrl] = useState(initialData?.frameUrl ?? NO_FRAME);
@@ -166,6 +174,10 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
       ownerPhone,
       city,
       primaryColor,
+      secondaryColor: secondaryColor || null,
+      textColor: textColor || null,
+      descriptionColor: descriptionColor || null,
+      priceColor: priceColor || null,
       isActive,
       ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
       bannerUrl: bannerUrl || undefined,
@@ -220,17 +232,65 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
           <Input value={city} onChange={(e) => setCity(e.target.value)} required />
         </div>
       </div>
-      <div className="flex gap-4 items-center">
-        <div>
-          <Label>צבע ראשי</Label>
-          <div className="flex gap-2 items-center mt-1">
+      <div className="flex flex-wrap gap-6 items-end">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע ראשי</Label>
+          <div className="flex gap-1 items-center">
             <input
               type="color"
               value={primaryColor}
               onChange={(e) => setPrimaryColor(e.target.value)}
-              className="h-10 w-14 rounded border cursor-pointer"
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
             />
-            <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-28" />
+            <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע משני (כותרות)</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={secondaryColor}
+              onChange={(e) => setSecondaryColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע טקסט</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע תיאור</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={descriptionColor}
+              onChange={(e) => setDescriptionColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={descriptionColor} onChange={(e) => setDescriptionColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע מחיר</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={priceColor}
+              onChange={(e) => setPriceColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={priceColor} onChange={(e) => setPriceColor(e.target.value)} className="w-20 h-9 text-sm" />
           </div>
         </div>
         <div className="flex items-center gap-2">

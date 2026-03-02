@@ -65,3 +65,11 @@ html:has([data-admin]) body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* קרוסלת קטגוריות – גלילה חלקה וגרירה טבעית */
+.carousel-smooth {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scroll-behavior: auto; /* גלילה טבעית – לא חלקה מלאכותית שגורמת לתקיעות */
+}

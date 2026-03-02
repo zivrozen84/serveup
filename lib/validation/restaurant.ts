@@ -7,13 +7,17 @@ export const restaurantSchema = z.object({
   ownerEmail: z.string().email("אימייל לא תקין"),
   ownerPhone: z.string().min(1, "טלפון חובה"),
   city: z.string().min(1, "עיר חובה"),
-  primaryColor: z.string().default("#c2410c"),
+  primaryColor: z.string().nullish().transform((v) => v ?? "#c2410c"),
+  secondaryColor: z.string().nullish(),
+  textColor: z.string().nullish(),
+  descriptionColor: z.string().nullish(),
+  priceColor: z.string().nullish(),
   isActive: z.boolean().default(true),
-  logoUrl: z.string().optional(),
-  bannerUrl: z.string().optional(),
-  backgroundUrl: z.string().optional(),
-  frameUrl: z.string().optional(),
-  frameVariants: z.string().optional(),
+  logoUrl: z.string().nullish(),
+  bannerUrl: z.string().nullish(),
+  backgroundUrl: z.string().nullish(),
+  frameUrl: z.string().nullish(),
+  frameVariants: z.string().nullish(),
 });
 
 export type RestaurantInput = z.infer<typeof restaurantSchema>;

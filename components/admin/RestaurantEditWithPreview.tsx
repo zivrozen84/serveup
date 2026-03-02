@@ -16,6 +16,10 @@ interface MenuProps {
     backgroundUrl: string | null;
     frameUrl: string | null;
     primaryColor: string;
+    secondaryColor?: string | null;
+    textColor?: string | null;
+    descriptionColor?: string | null;
+    priceColor?: string | null;
   };
   categories: Array<{
     id: number;
@@ -42,6 +46,10 @@ interface RestaurantEditWithPreviewProps {
     ownerPhone: string;
     city: string;
     primaryColor: string;
+    secondaryColor?: string | null;
+    textColor?: string | null;
+    descriptionColor?: string | null;
+    priceColor?: string | null;
     isActive: boolean;
     logoUrl?: string | null;
     bannerUrl?: string | null;
