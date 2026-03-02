@@ -149,14 +149,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col" dir="rtl" style={{ backgroundColor: "#1c1917" }}>
       <div className="flex-1 flex flex-col min-h-0">
         <div
-          className="relative w-full overflow-hidden shrink-0 h-52 min-h-[208px]"
+          className={`relative w-full overflow-hidden shrink-0 ${restaurant.bannerUrl ? "aspect-[1170/500] min-h-[140px]" : "h-52 min-h-[208px]"}`}
           style={{ backgroundColor: primaryColor }}
         >
           {restaurant.bannerUrl ? (
             <img
               src={restaurant.bannerUrl}
               alt={restaurant.name}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover object-center block"
               loading="eager"
             />
           ) : restaurant.logoUrl ? (
@@ -350,12 +350,20 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
     </div>
   );
 
-  if (!showPhoneFrame) return <div className="min-h-screen">{content}</div>;
+  if (!showPhoneFrame) {
+    return (
+      <div className="min-h-screen flex justify-center bg-stone-900">
+        <div style={{ width: PHONE_WIDTH, maxWidth: "100%" }}>
+          {content}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
       <div
-        className="rounded-[2.5rem] bg-black p-2 shadow-2xl ring-1 ring-stone-700"
+        className="rounded-[2.5rem] bg-black p-2 shadow-2xl"
         style={{ width: PHONE_WIDTH, maxWidth: "100%" }}
       >
         <div className="rounded-[2rem] overflow-hidden bg-black">

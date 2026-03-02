@@ -138,6 +138,7 @@ function DraggableDishRow({
   onEditFormChange,
   onSave,
   onCancelEdit,
+  onDismissError,
   onStartEdit,
   onDelete,
 }: {
@@ -149,6 +150,7 @@ function DraggableDishRow({
   onEditFormChange: (v: Partial<typeof editForm>) => void;
   onSave: (e: React.FormEvent) => void;
   onCancelEdit: () => void;
+  onDismissError?: () => void;
   onStartEdit: () => void;
   onDelete: () => void;
 }) {
@@ -199,6 +201,19 @@ function DraggableDishRow({
             }
             placeholder="מחיר"
           />
+          {saveError && (
+            <div className="flex items-center justify-between gap-2 p-2 rounded bg-red-500/10 border border-red-500/30">
+              <p className="text-sm text-red-400 flex-1">{saveError}</p>
+              <button
+                type="button"
+                onClick={() => (onDismissError ?? onCancelEdit)()}
+                className="text-red-400 hover:text-red-300 text-sm shrink-0"
+                aria-label="סגור"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button type="submit" size="sm" className="text-white" style={{ backgroundColor: "#37C27D" }}>
               שמור
@@ -434,31 +449,51 @@ export function MenuSection({
     e.preventDefault();
     if (!editingDish) return;
     setDishSaveError(null);
+    const title = (editForm.title.trim() || editingDish.title).trim();
+    if (!title) {
+      setDishSaveError("שם מנה חובה");
+      return;
+    }
     const priceVal = Number(editForm.priceCents);
-    const priceCents = isNaN(priceVal) || priceVal < 0 ? 0 : Math.round(priceVal * 100);
-    const res = await fetch(`/api/admin/dishes/${editingDish.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: editForm.title.trim(),
-        description: editForm.description?.trim() || null,
-        imageUrl: editForm.imageUrl?.trim() || null,
-        priceCents,
-      }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setEditingDish(null);
-      setDishSaveError(null);
-      router.refresh();
-    } else {
-      const err = data?.error;
-      const formErr = Array.isArray(err?.formErrors) ? err.formErrors[0] : null;
-      const fieldErr = err?.fieldErrors
-        ? Object.values(err.fieldErrors).flat().find(Boolean)
-        : null;
-      const msg = formErr || fieldErr || data?.message || "שגיאה בשמירה";
-      setDishSaveError(typeof msg === "string" ? msg : String(msg));
+    const priceCents = isNaN(priceVal) || priceVal < 0 ? editingDish.priceCents : Math.round(priceVal * 100);
+    const payload = {
+      title,
+      description: editForm.description?.trim() || null,
+      imageUrl: editForm.imageUrl?.trim() || null,
+      priceCents,
+    };
+    try {
+      const res = await fetch(`/api/admin/dishes/${editingDish.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCategories((p) =>
+          p.map((c) => ({
+            ...c,
+            dishes: c.dishes.map((d) =>
+              d.id === editingDish.id ? { ...d, ...data } : d
+            ),
+          }))
+        );
+        setEditingDish(null);
+        setDishSaveError(null);
+        router.refresh();
+      } else {
+        const err = data?.error;
+        let msg = "שגיאה בשמירה";
+        if (typeof err === "string") msg = err;
+        else if (err?.formErrors?.length) msg = err.formErrors[0];
+        else if (err?.fieldErrors) {
+          const first = Object.values(err.fieldErrors).flat().find(Boolean);
+          if (first) msg = String(first);
+        } else if (data?.message) msg = data.message;
+        setDishSaveError(msg);
+      }
+    } catch {
+      setDishSaveError("שגיאת רשת");
     }
   }
 
@@ -577,6 +612,7 @@ export function MenuSection({
                               onEditFormChange={setEditForm}
                               onSave={saveDish}
                               onCancelEdit={() => { setEditingDish(null); setDishSaveError(null); }}
+                              onDismissError={() => setDishSaveError(null)}
                               onStartEdit={() => { startEditDish(d); setDishSaveError(null); }}
                               onDelete={() => deleteDish(d.id)}
                             />
