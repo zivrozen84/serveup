@@ -66,6 +66,13 @@ html:has([data-admin]) body {
   scrollbar-width: none;
 }
 
+/* תפריט – טקסט בסיס לגודל דינמי */
+.menu-scalable { font-size: var(--menu-base, 16px); }
+.menu-scalable .menu-text-xs { font-size: 0.75em; }
+.menu-scalable .menu-text-sm { font-size: 0.875em; }
+.menu-scalable .menu-text-base { font-size: 1em; }
+.menu-scalable .menu-text-lg { font-size: 1.125em; }
+
 /* קרוסלת קטגוריות – גלילה חלקה וגרירה טבעית */
 .carousel-smooth {
   -webkit-overflow-scrolling: touch;

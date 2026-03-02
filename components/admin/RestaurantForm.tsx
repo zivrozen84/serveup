@@ -32,6 +32,8 @@ interface RestaurantFormProps {
     backgroundUrl?: string | null;
     frameUrl?: string | null;
     frameVariants?: string | null;
+    textSize?: number | null;
+    fontFamily?: string | null;
   };
 }
 
@@ -219,6 +221,10 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       frameUrl: frameUrl || undefined,
       frameVariants: frameVariants.length ? JSON.stringify(frameVariants) : undefined,
       backgroundUrl: backgroundUrl || undefined,
+      ...(initialData?.id && {
+        textSize: initialData.textSize ?? 16,
+        fontFamily: initialData.fontFamily ?? null,
+      }),
     });
     setSaving(false);
     if (!ok) {

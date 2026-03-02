@@ -19,6 +19,8 @@ export const restaurantSchema = z.object({
   frameUrl: z.string().nullish(),
   frameVariants: z.string().nullish(),
   menuDisplayFormat: z.enum(["large", "compact", "imageRight"]).default("large"),
+  textSize: z.number().int().min(10).max(32).optional(),
+  fontFamily: z.string().nullish(),
 });
 
 export type RestaurantInput = z.infer<typeof restaurantSchema>;

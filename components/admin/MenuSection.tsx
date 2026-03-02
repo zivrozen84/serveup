@@ -145,7 +145,7 @@ function DraggableDishRow({
   dish: Dish;
   isDragging: boolean;
   isEditing: boolean;
-  editForm: { title: string; description: string; priceCents: number; imageUrl: string };
+  editForm: { title?: string; description?: string; priceCents?: number; imageUrl?: string };
   saveError?: string | null;
   onEditFormChange: (v: Partial<typeof editForm>) => void;
   onSave: (e: React.FormEvent) => void;
@@ -164,19 +164,19 @@ function DraggableDishRow({
       <div className="flex items-center justify-between p-3 rounded-lg bg-[#1A1D21] border border-white/5">
         <form onSubmit={onSave} className="flex-1 flex flex-col gap-2">
           <Input
-            value={editForm.title}
+            value={editForm.title ?? ""}
             onChange={(e) => onEditFormChange({ title: e.target.value })}
             placeholder="שם מנה"
           />
           <Input
-            value={editForm.description}
+            value={editForm.description ?? ""}
             onChange={(e) => onEditFormChange({ description: e.target.value })}
             placeholder="תיאור (אופציונלי)"
           />
           <div>
             <label className="text-xs text-white/60 block mb-1">קישור תמונה</label>
             <Input
-              value={editForm.imageUrl}
+              value={editForm.imageUrl ?? ""}
               onChange={(e) => onEditFormChange({ imageUrl: e.target.value })}
               placeholder="https://..."
             />
@@ -195,10 +195,13 @@ function DraggableDishRow({
           <Input
             type="number"
             step="0.01"
-            value={editForm.priceCents || ""}
-            onChange={(e) =>
-              onEditFormChange({ priceCents: parseFloat(e.target.value) || 0 })
-            }
+            min="0"
+            value={editForm.priceCents === 0 ? "0" : (editForm.priceCents ?? "") || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              const num = val === "" ? 0 : parseFloat(val);
+              onEditFormChange({ priceCents: isNaN(num) || num < 0 ? 0 : num });
+            }}
             placeholder="מחיר"
           />
           {saveError && (
@@ -438,9 +441,9 @@ export function MenuSection({
   function startEditDish(d: Dish) {
     setEditingDish(d);
     setEditForm({
-      title: d.title,
+      title: d.title ?? "",
       description: d.description ?? "",
-      priceCents: d.priceCents / 100,
+      priceCents: (d.priceCents ?? 0) / 100,
       imageUrl: d.imageUrl ?? "",
     });
   }
@@ -449,19 +452,29 @@ export function MenuSection({
     e.preventDefault();
     if (!editingDish) return;
     setDishSaveError(null);
-    const title = (editForm.title.trim() || editingDish.title).trim();
-    if (!title) {
+    const base = editingDish;
+    const titleVal = (editForm?.title ?? base?.title ?? "").toString().trim();
+    const descVal = (editForm?.description ?? base?.description ?? "").toString().trim();
+    const imgVal = (editForm?.imageUrl ?? base?.imageUrl ?? "").toString().trim();
+    const priceVal = Number(editForm?.priceCents ?? base?.priceCents ?? 0);
+    const priceCents = isNaN(priceVal) || priceVal < 0 ? (base.priceCents ?? 0) : Math.round(priceVal * 100);
+    const newTitle = titleVal || (base?.title ?? "").toString().trim();
+    const newDesc = descVal || null;
+    const newImg = imgVal || null;
+    if (!newTitle) {
       setDishSaveError("שם מנה חובה");
       return;
     }
-    const priceVal = Number(editForm.priceCents);
-    const priceCents = isNaN(priceVal) || priceVal < 0 ? editingDish.priceCents : Math.round(priceVal * 100);
-    const payload = {
-      title,
-      description: editForm.description?.trim() || null,
-      imageUrl: editForm.imageUrl?.trim() || null,
-      priceCents,
-    };
+    const payload: Record<string, unknown> = {};
+    if (newTitle !== (base.title ?? "")) payload.title = newTitle;
+    if (newDesc !== (base.description ?? null)) payload.description = newDesc;
+    if (newImg !== (base.imageUrl ?? null)) payload.imageUrl = newImg;
+    if (priceCents !== (base.priceCents ?? 0)) payload.priceCents = priceCents;
+    if (Object.keys(payload).length === 0) {
+      setEditingDish(null);
+      setDishSaveError(null);
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/dishes/${editingDish.id}`, {
         method: "PUT",
@@ -485,11 +498,11 @@ export function MenuSection({
         const err = data?.error;
         let msg = "שגיאה בשמירה";
         if (typeof err === "string") msg = err;
-        else if (err?.formErrors?.length) msg = err.formErrors[0];
-        else if (err?.fieldErrors) {
+        else if (Array.isArray(err?.formErrors) && err.formErrors[0]) msg = String(err.formErrors[0]);
+        else if (err?.fieldErrors && typeof err.fieldErrors === "object") {
           const first = Object.values(err.fieldErrors).flat().find(Boolean);
           if (first) msg = String(first);
-        } else if (data?.message) msg = data.message;
+        } else if (data?.message) msg = String(data.message);
         setDishSaveError(msg);
       }
     } catch {
@@ -609,7 +622,7 @@ export function MenuSection({
                               isEditing={editingDish?.id === d.id}
                               editForm={editForm}
                               saveError={editingDish?.id === d.id ? dishSaveError : null}
-                              onEditFormChange={setEditForm}
+                              onEditFormChange={(v) => setEditForm((p) => ({ ...p, ...v }))}
                               onSave={saveDish}
                               onCancelEdit={() => { setEditingDish(null); setDishSaveError(null); }}
                               onDismissError={() => setDishSaveError(null)}

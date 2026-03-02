@@ -41,6 +41,8 @@ export default async function RestaurantEditPage({
       descriptionColor: restaurant.descriptionColor,
       priceColor: restaurant.priceColor,
       menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
+      textSize: (restaurant as { textSize?: number }).textSize ?? 16,
+      fontFamily: (restaurant as { fontFamily?: string | null }).fontFamily ?? null,
     },
     categories: restaurant.categories.map((c) => ({
       id: c.id,
@@ -76,6 +78,8 @@ export default async function RestaurantEditPage({
     backgroundUrl: restaurant.backgroundUrl,
     frameUrl: restaurant.frameUrl,
     frameVariants: restaurant.frameVariants,
+    textSize: (restaurant as { textSize?: number }).textSize ?? 16,
+    fontFamily: (restaurant as { fontFamily?: string | null }).fontFamily ?? null,
   };
 
   return (

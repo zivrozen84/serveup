@@ -58,6 +58,8 @@ model Restaurant {
   descriptionColor   String?  // תיאור
   priceColor         String?  // מחיר
   menuDisplayFormat  String   @default("large") // large | compact
+  textSize           Int      @default(16)      // גודל טקסט בסיס (px)
+  fontFamily         String?  // פונט (למשל Heebo, Assistant)
   city               String
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())

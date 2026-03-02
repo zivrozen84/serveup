@@ -63,6 +63,8 @@ export async function PUT(
       backgroundUrl: data.backgroundUrl ?? null,
       frameUrl: data.frameUrl ?? null,
       frameVariants: data.frameVariants ?? null,
+      textSize: data.textSize ?? 16,
+      fontFamily: data.fontFamily ?? null,
     },
   });
   return NextResponse.json(restaurant);
@@ -83,6 +85,8 @@ export async function PATCH(
   const frameUrl = typeof body.frameUrl === "string" ? body.frameUrl : null;
   const frameVariants = typeof body.frameVariants === "string" ? body.frameVariants : undefined;
   const menuDisplayFormat = ["large", "compact", "imageRight"].includes(body.menuDisplayFormat) ? body.menuDisplayFormat : undefined;
+  const textSize = typeof body.textSize === "number" && body.textSize >= 10 && body.textSize <= 32 ? body.textSize : undefined;
+  const fontFamily = body.fontFamily !== undefined ? (body.fontFamily === null || body.fontFamily === "" ? null : String(body.fontFamily)) : undefined;
 
   const restaurant = await prisma.restaurant.update({
     where: { id },
@@ -90,6 +94,8 @@ export async function PATCH(
       ...(frameUrl !== null && { frameUrl }),
       ...(frameVariants !== undefined && { frameVariants }),
       ...(menuDisplayFormat !== undefined && { menuDisplayFormat }),
+      ...(textSize !== undefined && { textSize }),
+      ...(fontFamily !== undefined && { fontFamily }),
     },
   });
   return NextResponse.json(restaurant);

@@ -9,8 +9,8 @@ export const dishSchema = z.object({
   title: z.string().min(1, "שם מנה חובה"),
   description: z.string().nullish(),
   allergens: z.string().nullish(),
-  priceCents: z.number().int().min(0, "מחיר לא תקין"),
-  sortOrder: z.number().int().min(0),
+  priceCents: z.coerce.number().min(0, "מחיר לא תקין").transform((v) => Math.max(0, Math.round(v))),
+  sortOrder: z.number().int().min(0).optional(),
   imageUrl: z.string().nullish(),
 });
 

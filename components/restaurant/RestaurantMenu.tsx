@@ -38,6 +38,8 @@ interface Restaurant {
   descriptionColor?: string | null;
   priceColor?: string | null;
   menuDisplayFormat?: "large" | "compact" | "imageRight";
+  textSize?: number | null;
+  fontFamily?: string | null;
 }
 
 interface RestaurantMenuProps {
@@ -133,6 +135,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
   const priceColor = restaurant.priceColor || "#fffbeb";
   const hasBg = !!restaurant.backgroundUrl;
   const displayFormat = restaurant.menuDisplayFormat ?? "large";
+  const baseFontSize = restaurant.textSize ?? 16;
+  const fontFamily = restaurant.fontFamily || "inherit";
   const menuBgStyle = hasBg
     ? {
         backgroundImage: `url(${restaurant.backgroundUrl})`,
@@ -145,8 +149,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
       ? { backgroundColor: "#1c1917" as const }
       : undefined;
 
+  const contentStyle: React.CSSProperties = {
+    backgroundColor: "#1c1917",
+    ["--menu-base" as string]: `${baseFontSize}px`,
+    fontFamily,
+  };
+
   const content = (
-    <div className="min-h-screen min-h-[100dvh] relative flex flex-col" dir="rtl" style={{ backgroundColor: "#1c1917" }}>
+    <div className="min-h-screen min-h-[100dvh] relative flex flex-col menu-scalable" dir="rtl" style={contentStyle}>
       <div className="flex-1 flex flex-col min-h-0">
         <div
           className={`relative w-full overflow-hidden shrink-0 ${restaurant.bannerUrl ? "aspect-[1170/500] min-h-[140px]" : "h-52 min-h-[208px]"}`}
@@ -193,7 +203,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                 <button
                   key={`${cat.id}-${idx}`}
                   onClick={() => handleCategoryClick(cat.id)}
-                  className="shrink-0 px-5 py-2.5 rounded-full text-base font-bold transition-colors shadow-lg whitespace-nowrap"
+                  className="shrink-0 px-5 py-2.5 rounded-full menu-text-base font-bold transition-colors shadow-lg whitespace-nowrap"
                   style={{
                     backgroundColor: activeCat === cat.id ? primaryColor : "rgba(0,0,0,0.5)",
                     color: "white",
@@ -211,7 +221,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
             {categories.map((cat) => (
               <section key={cat.id} data-cat={cat.id} className="pt-6">
                 <h2
-                  className="text-lg font-bold mb-4 px-1 relative z-[1]"
+                  className="menu-text-lg font-bold mb-4 px-1 relative z-[1]"
                   style={{
                     color: secondaryColor,
                     textShadow: "0 1px 4px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)",
@@ -251,8 +261,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                           )}
                         </div>
                         <div className="w-full pt-2 text-center space-y-0.5">
-                          <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
-                          <p className="font-bold text-base -mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                          <p className="font-bold menu-text-base -mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
                         </div>
                       </div>
                     ))}
@@ -289,11 +299,11 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                           )}
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col gap-0.5 pt-0.5">
-                          <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                          <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
                           {d.description && (
-                            <p className="text-xs leading-snug line-clamp-2" style={{ color: descriptionColor }}>{d.description}</p>
+                            <p className="menu-text-xs leading-snug line-clamp-2" style={{ color: descriptionColor }}>{d.description}</p>
                           )}
-                          <p className="font-bold text-sm" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          <p className="font-bold menu-text-sm" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
                         </div>
                       </div>
                     ))}
@@ -304,12 +314,12 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                       <div key={d.id} className="flex gap-3 items-start flex-row-reverse py-3 border-b-2 border-white/20 last:border-b-0">
                         <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-between min-h-[88px] text-left">
                           <div>
-                            <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                            <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
                             {d.description && (
-                              <p className="text-xs leading-snug line-clamp-2 mt-0.5" style={{ color: descriptionColor }}>{d.description}</p>
+                              <p className="menu-text-xs leading-snug line-clamp-2 mt-0.5" style={{ color: descriptionColor }}>{d.description}</p>
                             )}
                           </div>
-                          <p className="font-bold text-sm mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          <p className="font-bold menu-text-sm mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
                         </div>
                         <div className="w-20 h-20 shrink-0 aspect-square relative overflow-visible bg-[#2d2926] rounded-lg">
                           {d.imageUrl ? (

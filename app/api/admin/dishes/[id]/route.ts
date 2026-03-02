@@ -33,16 +33,22 @@ export async function PUT(
     }, { status: 400 });
   }
 
+  const data = parsed.data;
+  const priceCents = data.priceCents != null ? Math.round(Number(data.priceCents)) : undefined;
+  if (priceCents != null && (priceCents < 0 || !Number.isFinite(priceCents))) {
+    return NextResponse.json({ error: "מחיר לא תקין", message: "מחיר לא תקין" }, { status: 400 });
+  }
+
   try {
     const dish = await prisma.dish.update({
       where: { id: dishId },
       data: {
-        ...(parsed.data.title != null && { title: parsed.data.title }),
-        ...(parsed.data.description !== undefined && { description: parsed.data.description }),
-        ...(parsed.data.allergens !== undefined && { allergens: parsed.data.allergens }),
-        ...(parsed.data.priceCents != null && { priceCents: parsed.data.priceCents }),
-        ...(parsed.data.imageUrl !== undefined && { imageUrl: parsed.data.imageUrl ?? null }),
-        ...(parsed.data.sortOrder != null && { sortOrder: parsed.data.sortOrder }),
+        ...(data.title != null && { title: String(data.title).trim() }),
+        ...(data.description !== undefined && { description: data.description || null }),
+        ...(data.allergens !== undefined && { allergens: data.allergens || null }),
+        ...(priceCents != null && { priceCents }),
+        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
+        ...(data.sortOrder != null && { sortOrder: data.sortOrder }),
       },
     });
     return NextResponse.json(dish);

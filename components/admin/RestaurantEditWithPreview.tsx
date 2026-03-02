@@ -5,6 +5,7 @@ import { RestaurantForm } from "./RestaurantForm";
 import { RestaurantMenu } from "@/components/restaurant/RestaurantMenu";
 import { MenuSection } from "./MenuSection";
 import { TablesSection } from "./TablesSection";
+import { TextSettingsSection } from "./TextSettingsSection";
 
 interface MenuProps {
   restaurant: {
@@ -21,6 +22,8 @@ interface MenuProps {
     descriptionColor?: string | null;
     priceColor?: string | null;
     menuDisplayFormat?: string;
+    textSize?: number | null;
+    fontFamily?: string | null;
   };
   categories: Array<{
     id: number;
@@ -59,6 +62,8 @@ interface RestaurantEditWithPreviewProps {
     backgroundUrl?: string | null;
     frameUrl?: string | null;
     frameVariants?: string | null;
+    textSize?: number | null;
+    fontFamily?: string | null;
   };
   tables: Array<{ id: number; tableNumber: number; description: string | null }>;
 }
@@ -73,6 +78,8 @@ export function RestaurantEditWithPreview({
   const [previewMenuFormat, setPreviewMenuFormat] = useState<"large" | "compact" | "imageRight">(
     (menuProps.restaurant.menuDisplayFormat as "large" | "compact" | "imageRight") ?? "large"
   );
+  const [previewTextSize, setPreviewTextSize] = useState<number | null>(null);
+  const [previewFontFamily, setPreviewFontFamily] = useState<string | null | undefined>(undefined);
   const handleFrameChange = useCallback((url: string) => setPreviewFrameUrl(url), []);
   const handleMenuFormatChange = useCallback((format: "large" | "compact" | "imageRight") => {
     setPreviewMenuFormat(format);
@@ -83,6 +90,8 @@ export function RestaurantEditWithPreview({
     ...menuProps.restaurant,
     frameUrl: previewFrameUrl !== null ? previewFrameUrl : (menuProps.restaurant.frameUrl ?? ""),
     menuDisplayFormat: previewMenuFormat,
+    textSize: previewTextSize ?? menuProps.restaurant.textSize ?? 16,
+    fontFamily: previewFontFamily !== undefined ? previewFontFamily : (menuProps.restaurant.fontFamily ?? null),
   };
 
   return (
@@ -106,6 +115,13 @@ export function RestaurantEditWithPreview({
           restaurant={previewRestaurant}
           categories={menuProps.categories}
           forcePreview
+        />
+        <TextSettingsSection
+          restaurantId={menuProps.restaurant.id}
+          textSize={previewRestaurant.textSize ?? 16}
+          fontFamily={previewRestaurant.fontFamily ?? null}
+          onTextSizeChange={setPreviewTextSize}
+          onFontFamilyChange={setPreviewFontFamily}
         />
       </div>
     </div>
