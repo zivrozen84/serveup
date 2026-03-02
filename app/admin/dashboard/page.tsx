@@ -18,34 +18,37 @@ export default async function DashboardPage() {
   const totalTables = restaurants.reduce((s, r) => s + r._count.tables, 0);
 
   const cards = [
-    { title: "מסעדות פעילות", value: activeRestaurants, accent: "#37C27D", badge: "red" },
-    { title: "הזמנות היום", value: "0", accent: "#4A90E2", badge: null },
-    { title: "הכנסות היום", value: "₪0", accent: "#F5A623", badge: null },
-    { title: "שולחנות פעילים", value: totalTables, accent: "#D0021B", badge: "green" },
+    { title: "מסעדות פעילות", value: activeRestaurants, accent: "#37C27D", badge: "red", bars: [2, 4, 6, 4, 7, 5, 3] },
+    { title: "הזמנות היום", value: "0", accent: "#4A90E2", badge: null, bars: [1, 3, 2, 5, 2, 4, 6] },
+    { title: "הכנסות היום", value: "₪0", accent: "#F5A623", badge: null, bars: [5, 3, 7, 4, 6, 2, 5] },
+    { title: "שולחנות פעילים", value: totalTables, accent: "#D0021B", badge: "green", bars: [3, 6, 4, 2, 5, 7, 4] },
   ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-white">סקירת מערכת כללית</h1>
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
+      <h1 className="text-2xl font-bold mb-8 text-white">סקירת מערכת כללית</h1>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {cards.map((card) => (
-          <div key={card.title} className="rounded-lg border border-white/5 bg-[#0e1118] p-3 relative min-h-[120px]">
-            <div>
-              <p className="text-xl font-bold" style={{ color: card.accent }}>{card.title}</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: card.accent }}>{card.value}</p>
-            </div>
+          <div
+            key={card.title}
+            className="rounded-xl border border-white/5 bg-[#0e1118] p-5 relative min-h-[140px] flex flex-col"
+          >
+            <p className="text-sm font-medium text-white/60 mb-3">{card.title}</p>
+            <p className="text-3xl font-bold flex-1 flex items-center mb-14" style={{ color: card.accent }}>
+              {card.value}
+            </p>
             {card.badge === "red" && (
-              <span className="absolute bottom-2 left-2 w-3 h-3 rounded-full bg-[#D0021B] text-[8px] font-bold text-white flex items-center justify-center">0</span>
+              <span className="absolute bottom-4 left-4 w-2.5 h-2.5 rounded-full bg-[#D0021B]" />
             )}
             {card.badge === "green" && (
-              <span className="absolute bottom-2 left-2 w-3 h-3 rounded-full bg-[#37C27D] text-[8px] font-bold text-white flex items-center justify-center">0</span>
+              <span className="absolute bottom-4 left-4 w-2.5 h-2.5 rounded-full bg-[#37C27D]" />
             )}
-            <div className="absolute bottom-2 right-2 flex gap-1 h-8 items-end">
-              {[2, 4, 2, 5, 7, 5, 1].map((h, i) => (
+            <div className="absolute bottom-4 right-4 flex gap-0.5 h-10 items-end">
+              {card.bars.map((h, i) => (
                 <div
                   key={i}
-                  className="w-2 rounded-sm"
-                  style={{ height: `${h * 4}px`, backgroundColor: card.accent }}
+                  className="w-1.5 rounded-sm opacity-80"
+                  style={{ height: `${h * 5}px`, backgroundColor: card.accent }}
                 />
               ))}
             </div>

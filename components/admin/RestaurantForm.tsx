@@ -96,7 +96,6 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
     const data = await res.json();
     setSaving(false);
     if (res.ok) {
-      router.push("/admin/restaurants");
       router.refresh();
     } else {
       setError(data.error || { form: [data.message || "שגיאה"] });
