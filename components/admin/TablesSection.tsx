@@ -35,6 +35,13 @@ export function TablesSection({ restaurantId, tables }: { restaurantId: number; 
     }
   }
 
+  async function handleDelete(tableId: number) {
+    const res = await fetch(`/api/admin/restaurants/${restaurantId}/tables/${tableId}`, {
+      method: "DELETE",
+    });
+    if (res.ok) setList((p) => p.filter((t) => t.id !== tableId));
+  }
+
   return (
     <div>
       <h2 className="text-lg font-semibold mb-4">שולחנות</h2>
@@ -55,9 +62,18 @@ export function TablesSection({ restaurantId, tables }: { restaurantId: number; 
         {list.map((t) => (
           <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-[#0e1118]">
             <span className="font-medium">שולחן {t.tableNumber}</span>
-            <code className="text-xs bg-[#1A1D21] px-2 py-1 rounded truncate max-w-[200px]">
-              /r/{t.token}
-            </code>
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-[#1A1D21] px-2 py-1 rounded truncate max-w-[200px]">
+                /r/{t.token}
+              </code>
+              <button
+                type="button"
+                onClick={() => handleDelete(t.id)}
+                className="text-red-400 hover:text-red-300 text-sm"
+              >
+                הסר
+              </button>
+            </div>
           </div>
         ))}
       </div>

@@ -11,7 +11,8 @@ export async function PUT(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const dishId = parseInt(params.id);
+  const { id } = await params;
+  const dishId = parseInt(id);
   if (isNaN(dishId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const body = await request.json();
@@ -39,7 +40,8 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const dishId = parseInt(params.id);
+  const { id } = await params;
+  const dishId = parseInt(id);
   if (isNaN(dishId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   await prisma.dish.delete({ where: { id: dishId } });

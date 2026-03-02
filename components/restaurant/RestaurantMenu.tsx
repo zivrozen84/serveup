@@ -92,9 +92,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
       )}
       <div className={hasBg && isNarrow ? "relative z-10" : ""}>
         <div
-          className={`relative w-full overflow-hidden shrink-0 ${
-            forcePreview ? "h-52 min-h-[208px]" : "h-44 min-h-[176px]"
-          }`}
+          className="relative w-full overflow-hidden shrink-0 h-52 min-h-[208px]"
           style={{ backgroundColor: primaryColor }}
         >
           {restaurant.bannerUrl ? (
@@ -119,52 +117,28 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
           )}
         </div>
 
-        {!forcePreview && (
-          <div className="sticky top-0 z-10 shrink-0">
-            <div className="flex gap-3 overflow-x-auto py-4 px-5 scrollbar-hide">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCat(cat.id)}
-                  className="shrink-0 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                  style={{
-                    backgroundColor: activeCat === cat.id ? primaryColor : "rgba(120,53,15,0.7)",
-                    color: "white",
-                    border: "2px solid rgba(214,211,209,0.35)",
-                    boxShadow: "0 0 0 2px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div
           className="flex-1 min-h-0 flex flex-col relative"
           style={menuBgStyle}
         >
-          {forcePreview && (
-            <div className="absolute top-4 right-0 left-0 z-10 flex justify-center gap-2 px-4 flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCat(cat.id)}
-                  className="shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-lg"
-                  style={{
-                    backgroundColor: activeCat === cat.id ? primaryColor : "rgba(0,0,0,0.5)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    backdropFilter: "blur(8px)",
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <div ref={scrollRef} className={`pb-10 px-5 flex-1 ${forcePreview ? "pt-16" : "pt-6"}`}>
+          <div className="absolute top-4 right-0 left-0 z-10 flex justify-center gap-2 px-4 flex-wrap">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCat(cat.id)}
+                className="shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-lg"
+                style={{
+                  backgroundColor: activeCat === cat.id ? primaryColor : "rgba(0,0,0,0.5)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+          <div ref={scrollRef} className="pb-10 px-5 flex-1 pt-16">
             {categories.map((cat) => (
               <section key={cat.id} data-cat={cat.id} className="pt-6">
                 <h2 className="text-amber-200 text-sm font-semibold mb-4 px-1">{cat.name}</h2>
@@ -202,9 +176,6 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                           <p className="text-xs text-amber-200/80 line-clamp-2">{d.description}</p>
                         )}
                         <p className="font-bold text-base text-amber-50 pt-0.5">₪{formatPrice(d.priceCents)}</p>
-                        {d.allergens && (
-                          <p className="text-[10px] text-amber-300/80 pt-0.5">{d.allergens}</p>
-                        )}
                       </div>
                     </div>
                   ))}
