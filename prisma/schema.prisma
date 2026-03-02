@@ -1,0 +1,104 @@
+// Serveup - Super Admin Panel
+// Database schema for restaurant ordering system
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  email        String?  @unique
+  username     String?  @unique
+  passwordHash String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+
+  @@map("admin_users")
+}
+
+model AllowedIP {
+  id        Int      @id @default(autoincrement())
+  ipAddress String   @unique
+  label     String?
+  createdAt DateTime @default(now())
+
+  @@map("allowed_ips")
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  ipAddress String
+  success   Boolean
+  timestamp DateTime @default(now())
+
+  @@map("login_logs")
+}
+
+model Restaurant {
+  id            Int      @id @default(autoincrement())
+  uuid          String   @unique @default(uuid())
+  name          String
+  slug          String   @unique
+  ownerName     String
+  ownerEmail    String
+  ownerPhone    String
+  logoUrl       String?
+  bannerUrl     String?
+  backgroundUrl String?
+  primaryColor  String   @default("#000000")
+  city          String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  tables     Table[]
+  categories Category[]
+
+  @@map("restaurants")
+}
+
+model Category {
+  id           Int      @id @default(autoincrement())
+  restaurantId Int
+  name         String
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  dishes     Dish[]
+
+  @@map("categories")
+}
+
+model Dish {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int
+  title       String
+  imageUrl    String?
+  description String?
+  allergens   String?
+  priceCents  Int      @default(0)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("dishes")
+}
+
+model Table {
+  id           Int      @id @default(autoincrement())
+  restaurantId Int
+  tableNumber  Int
+  description  String?
+  token        String   @unique
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@map("tables")
+}

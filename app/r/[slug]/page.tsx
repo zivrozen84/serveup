@@ -1,0 +1,46 @@
+import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
+import { RestaurantMenu } from "@/components/restaurant/RestaurantMenu";
+
+export default async function RestaurantMenuPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { slug: params.slug, isActive: true },
+    include: {
+      categories: {
+        orderBy: { sortOrder: "asc" },
+        include: { dishes: { orderBy: { sortOrder: "asc" } } },
+      },
+    },
+  });
+  if (!restaurant) notFound();
+
+  return (
+    <RestaurantMenu
+      restaurant={{
+        id: restaurant.id,
+        name: restaurant.name,
+        slug: restaurant.slug,
+        logoUrl: restaurant.logoUrl,
+        bannerUrl: restaurant.bannerUrl,
+        backgroundUrl: restaurant.backgroundUrl,
+        primaryColor: restaurant.primaryColor,
+      }}
+      categories={restaurant.categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        dishes: c.dishes.map((d) => ({
+          id: d.id,
+          title: d.title,
+          imageUrl: d.imageUrl,
+          description: d.description,
+          allergens: d.allergens,
+          priceCents: d.priceCents,
+        })),
+      }))}
+    />
+  );
+}
