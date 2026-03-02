@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 
 interface RestaurantFormProps {
   onFrameChange?: (url: string) => void;
+  onMenuDisplayFormatChange?: (format: "large" | "compact" | "imageRight") => void;
   initialData?: {
     id?: number;
     name: string;
@@ -24,6 +25,7 @@ interface RestaurantFormProps {
     textColor?: string | null;
     descriptionColor?: string | null;
     priceColor?: string | null;
+    menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
     bannerUrl?: string | null;
@@ -33,7 +35,7 @@ interface RestaurantFormProps {
   };
 }
 
-export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormProps) {
+export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormatChange }: RestaurantFormProps) {
   const router = useRouter();
   const [name, setName] = useState(initialData?.name ?? "");
   const [slug, setSlug] = useState(initialData?.slug ?? "");
@@ -46,6 +48,9 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
   const [textColor, setTextColor] = useState(initialData?.textColor ?? "#fef3c7");
   const [descriptionColor, setDescriptionColor] = useState(initialData?.descriptionColor ?? "#fde68a");
   const [priceColor, setPriceColor] = useState(initialData?.priceColor ?? "#fffbeb");
+  const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "compact" | "imageRight">(
+    (initialData?.menuDisplayFormat as "large" | "compact" | "imageRight") ?? "large"
+  );
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
   const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl ?? "");
   const [frameUrl, setFrameUrl] = useState(initialData?.frameUrl ?? NO_FRAME);
@@ -62,10 +67,16 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
   const [error, setError] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [savingFrame, setSavingFrame] = useState(false);
+  const [savingFormat, setSavingFormat] = useState(false);
 
   useEffect(() => {
     if (onFrameChange) onFrameChange(frameUrl || NO_FRAME);
   }, [frameUrl, onFrameChange]);
+
+  useEffect(() => {
+    const fmt = (initialData?.menuDisplayFormat as "large" | "compact") ?? "large";
+    setMenuDisplayFormat(fmt);
+  }, [initialData?.menuDisplayFormat]);
 
   useEffect(() => {
     if (!initialData && name) {
@@ -133,6 +144,29 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
     return { ok: res.ok, data };
   }
 
+  async function handleMenuDisplayFormatSelect(format: "large" | "compact" | "imageRight") {
+    setMenuDisplayFormat(format);
+    onMenuDisplayFormatChange?.(format);
+    if (!initialData?.id) return;
+    setSavingFormat(true);
+    setError((p) => ({ ...p, menuDisplayFormat: [] }));
+    try {
+      const res = await fetch(`/api/admin/restaurants/${initialData.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ menuDisplayFormat: format }),
+      });
+      if (res.ok) router.refresh();
+      else {
+        const data = await res.json().catch(() => ({}));
+        setError((p) => ({ ...p, menuDisplayFormat: [data?.message || "שגיאה בשמירה"] }));
+      }
+    } catch {
+      setError((p) => ({ ...p, menuDisplayFormat: ["שגיאה בשמירה"] }));
+    }
+    setSavingFormat(false);
+  }
+
   async function handleFrameSelect(url: string) {
     setFrameUrl(url);
     onFrameChange?.(url);
@@ -178,6 +212,7 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
       textColor: textColor || null,
       descriptionColor: descriptionColor || null,
       priceColor: priceColor || null,
+      menuDisplayFormat,
       isActive,
       ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
       bannerUrl: bannerUrl || undefined,
@@ -303,6 +338,49 @@ export function RestaurantForm({ initialData, onFrameChange }: RestaurantFormPro
           />
           <Label htmlFor="isActive">פעיל</Label>
         </div>
+      </div>
+      <div>
+        <Label className="text-xs mb-2 block">תצוגת מנות בתפריט</Label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={savingFormat}
+            onClick={() => handleMenuDisplayFormatSelect("large")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+              menuDisplayFormat === "large"
+                ? "bg-[#37C27D] text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            ריבועים גדולים
+          </button>
+          <button
+            type="button"
+            disabled={savingFormat}
+            onClick={() => handleMenuDisplayFormatSelect("compact")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+              menuDisplayFormat === "compact"
+                ? "bg-[#37C27D] text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            ריבועים קטנים (כותרת מימין)
+          </button>
+          <button
+            type="button"
+            disabled={savingFormat}
+            onClick={() => handleMenuDisplayFormatSelect("imageRight")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+              menuDisplayFormat === "imageRight"
+                ? "bg-[#37C27D] text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            תמונה ימין (כותרת שמאל)
+          </button>
+          {savingFormat && <span className="text-xs text-white/60 self-center">שומר...</span>}
+        </div>
+        {error.menuDisplayFormat?.[0] && <p className="text-sm text-destructive mt-1">{error.menuDisplayFormat[0]}</p>}
       </div>
       <div>
         <Label>באנר</Label>

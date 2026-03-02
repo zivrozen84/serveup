@@ -56,6 +56,7 @@ export async function PUT(
       textColor: data.textColor ?? null,
       descriptionColor: data.descriptionColor ?? null,
       priceColor: data.priceColor ?? null,
+      menuDisplayFormat: data.menuDisplayFormat ?? "large",
       isActive: data.isActive ?? true,
       logoUrl: data.logoUrl ?? null,
       bannerUrl: data.bannerUrl ?? null,
@@ -81,12 +82,14 @@ export async function PATCH(
   const body = await request.json();
   const frameUrl = typeof body.frameUrl === "string" ? body.frameUrl : null;
   const frameVariants = typeof body.frameVariants === "string" ? body.frameVariants : undefined;
+  const menuDisplayFormat = ["large", "compact", "imageRight"].includes(body.menuDisplayFormat) ? body.menuDisplayFormat : undefined;
 
   const restaurant = await prisma.restaurant.update({
     where: { id },
     data: {
       ...(frameUrl !== null && { frameUrl }),
       ...(frameVariants !== undefined && { frameVariants }),
+      ...(menuDisplayFormat !== undefined && { menuDisplayFormat }),
     },
   });
   return NextResponse.json(restaurant);

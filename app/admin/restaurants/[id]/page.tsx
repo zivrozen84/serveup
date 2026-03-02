@@ -40,6 +40,7 @@ export default async function RestaurantEditPage({
       textColor: restaurant.textColor,
       descriptionColor: restaurant.descriptionColor,
       priceColor: restaurant.priceColor,
+      menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
     },
     categories: restaurant.categories.map((c) => ({
       id: c.id,
@@ -68,6 +69,7 @@ export default async function RestaurantEditPage({
     textColor: restaurant.textColor,
     descriptionColor: restaurant.descriptionColor,
     priceColor: restaurant.priceColor,
+    menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
     isActive: restaurant.isActive,
     logoUrl: restaurant.logoUrl,
     bannerUrl: restaurant.bannerUrl,

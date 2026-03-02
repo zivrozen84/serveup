@@ -20,6 +20,7 @@ interface MenuProps {
     textColor?: string | null;
     descriptionColor?: string | null;
     priceColor?: string | null;
+    menuDisplayFormat?: string;
   };
   categories: Array<{
     id: number;
@@ -37,6 +38,7 @@ interface MenuProps {
 
 interface RestaurantEditWithPreviewProps {
   menuProps: MenuProps;
+  onMenuDisplayFormatChange?: (format: "large" | "compact") => void;
   formInitialData: {
     id: number;
     name: string;
@@ -50,6 +52,7 @@ interface RestaurantEditWithPreviewProps {
     textColor?: string | null;
     descriptionColor?: string | null;
     priceColor?: string | null;
+    menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
     bannerUrl?: string | null;
@@ -64,13 +67,22 @@ export function RestaurantEditWithPreview({
   menuProps,
   formInitialData,
   tables,
+  onMenuDisplayFormatChange,
 }: RestaurantEditWithPreviewProps) {
   const [previewFrameUrl, setPreviewFrameUrl] = useState<string | null>(null);
+  const [previewMenuFormat, setPreviewMenuFormat] = useState<"large" | "compact" | "imageRight">(
+    (menuProps.restaurant.menuDisplayFormat as "large" | "compact" | "imageRight") ?? "large"
+  );
   const handleFrameChange = useCallback((url: string) => setPreviewFrameUrl(url), []);
+  const handleMenuFormatChange = useCallback((format: "large" | "compact" | "imageRight") => {
+    setPreviewMenuFormat(format);
+    onMenuDisplayFormatChange?.(format);
+  }, [onMenuDisplayFormatChange]);
 
   const previewRestaurant = {
     ...menuProps.restaurant,
     frameUrl: previewFrameUrl !== null ? previewFrameUrl : (menuProps.restaurant.frameUrl ?? ""),
+    menuDisplayFormat: previewMenuFormat,
   };
 
   return (
@@ -79,6 +91,7 @@ export function RestaurantEditWithPreview({
         <RestaurantForm
           initialData={formInitialData}
           onFrameChange={handleFrameChange}
+          onMenuDisplayFormatChange={handleMenuFormatChange}
         />
         <div className="mt-12">
           <TablesSection restaurantId={menuProps.restaurant.id} tables={tables} />

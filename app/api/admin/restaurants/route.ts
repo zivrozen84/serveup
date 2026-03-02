@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       textColor: data.textColor ?? null,
       descriptionColor: data.descriptionColor ?? null,
       priceColor: data.priceColor ?? null,
+      menuDisplayFormat: data.menuDisplayFormat ?? "large",
       isActive: data.isActive ?? true,
       logoUrl: data.logoUrl ?? null,
       bannerUrl: data.bannerUrl ?? null,

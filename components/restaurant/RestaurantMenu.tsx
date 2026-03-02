@@ -37,6 +37,7 @@ interface Restaurant {
   textColor?: string | null;
   descriptionColor?: string | null;
   priceColor?: string | null;
+  menuDisplayFormat?: "large" | "compact" | "imageRight";
 }
 
 interface RestaurantMenuProps {
@@ -131,11 +132,13 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
   const descriptionColor = restaurant.descriptionColor || "#fde68a";
   const priceColor = restaurant.priceColor || "#fffbeb";
   const hasBg = !!restaurant.backgroundUrl;
-  const menuBgStyle = hasBg && showPhoneFrame
+  const displayFormat = restaurant.menuDisplayFormat ?? "large";
+  const menuBgStyle = hasBg
     ? {
         backgroundImage: `url(${restaurant.backgroundUrl})`,
-        backgroundSize: "cover" as const,
+        backgroundSize: "100% 100%" as const,
         backgroundPosition: "center" as const,
+        backgroundRepeat: "no-repeat" as const,
         backgroundColor: "#1c1917",
       }
     : !hasBg
@@ -143,20 +146,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
       : undefined;
 
   const content = (
-    <div className="min-h-screen relative flex flex-col" dir="rtl" style={{ backgroundColor: "#1c1917" }}>
-      {hasBg && isNarrow && (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <img
-            src={restaurant.backgroundUrl!}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover object-center min-w-full min-h-full"
-            style={{ width: "100%", height: "100%" }}
-            loading="eager"
-          />
-          <div className="absolute inset-0 bg-[#1c1917]/25" aria-hidden />
-        </div>
-      )}
-      <div className={hasBg && isNarrow ? "relative z-10" : ""}>
+    <div className="min-h-screen min-h-[100dvh] relative flex flex-col" dir="rtl" style={{ backgroundColor: "#1c1917" }}>
+      <div className="flex-1 flex flex-col min-h-0">
         <div
           className="relative w-full overflow-hidden shrink-0 h-52 min-h-[208px]"
           style={{ backgroundColor: primaryColor }}
@@ -184,10 +175,10 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
         </div>
 
         <div
-          className="flex-1 min-h-0 flex flex-col relative"
+          className="flex-1 min-h-0 flex flex-col relative overflow-visible min-h-[60vh]"
           style={menuBgStyle}
         >
-          <div className="absolute top-4 right-0 left-0 z-10 overflow-hidden px-2">
+          <div className="absolute top-4 right-0 left-0 z-10 px-2 overflow-visible">
             <div
               ref={carouselRef}
               onScroll={handleCarouselScroll}
@@ -219,44 +210,138 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
           <div ref={scrollRef} className="pb-10 px-5 flex-1 pt-16">
             {categories.map((cat) => (
               <section key={cat.id} data-cat={cat.id} className="pt-6">
-                <h2 className="text-lg font-bold mb-4 px-1" style={{ color: secondaryColor }}>{cat.name}</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {(cat.dishes ?? []).map((d) => (
-                    <div key={d.id} className="flex flex-col items-center">
-                      <div className="w-full aspect-square relative overflow-visible bg-[#2d2926]">
-                        {d.imageUrl ? (
-                          <img
-                            src={d.imageUrl}
-                            alt={d.title}
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="absolute inset-0 w-full h-full flex items-center justify-center"
-                            style={{ backgroundColor: primaryColor + "40" }}
-                          >
-                            <span className="text-4xl text-white/50">?</span>
+                <h2
+                  className="text-lg font-bold mb-4 px-1 relative z-[1]"
+                  style={{
+                    color: secondaryColor,
+                    textShadow: "0 1px 4px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  {cat.name}
+                </h2>
+                {displayFormat === "large" ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {(cat.dishes ?? []).map((d) => (
+                      <div key={d.id} className="flex flex-col items-center">
+                        <div className="w-full aspect-square relative overflow-visible bg-[#2d2926]">
+                          {d.imageUrl ? (
+                            <img
+                              src={d.imageUrl}
+                              alt={d.title}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div
+                              className="absolute inset-0 w-full h-full flex items-center justify-center"
+                              style={{ backgroundColor: primaryColor + "40" }}
+                            >
+                              <span className="text-4xl text-white/50">?</span>
+                            </div>
+                          )}
+                          {restaurant.frameUrl && (
+                            <div
+                              className="absolute inset-0 w-full h-full pointer-events-none"
+                              style={{
+                                backgroundImage: `url(${restaurant.frameUrl})`,
+                                backgroundSize: "111% 111%",
+                                backgroundPosition: "center",
+                                backgroundRepeat: "no-repeat",
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div className="w-full pt-2 text-center space-y-0.5">
+                          <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                          <p className="font-bold text-base -mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : displayFormat === "compact" ? (
+                  <div className="flex flex-col">
+                    {(cat.dishes ?? []).map((d) => (
+                      <div key={d.id} className="flex gap-3 items-start flex-row-reverse py-3 border-b-2 border-white/20 last:border-b-0">
+                        <div className="w-20 h-20 shrink-0 aspect-square relative overflow-visible bg-[#2d2926] rounded-lg">
+                          {d.imageUrl ? (
+                            <img
+                              src={d.imageUrl}
+                              alt={d.title}
+                              className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div
+                              className="absolute inset-0 w-full h-full flex items-center justify-center rounded-lg"
+                              style={{ backgroundColor: primaryColor + "40" }}
+                            >
+                              <span className="text-xl text-white/50">?</span>
+                            </div>
+                          )}
+                          {restaurant.frameUrl && (
+                            <div
+                              className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
+                              style={{
+                                backgroundImage: `url(${restaurant.frameUrl})`,
+                                backgroundSize: "111% 111%",
+                                backgroundPosition: "center",
+                                backgroundRepeat: "no-repeat",
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5 pt-0.5">
+                          <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                          {d.description && (
+                            <p className="text-xs leading-snug line-clamp-2" style={{ color: descriptionColor }}>{d.description}</p>
+                          )}
+                          <p className="font-bold text-sm" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {(cat.dishes ?? []).map((d) => (
+                      <div key={d.id} className="flex gap-3 items-start flex-row-reverse py-3 border-b-2 border-white/20 last:border-b-0">
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-between min-h-[88px] text-left">
+                          <div>
+                            <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                            {d.description && (
+                              <p className="text-xs leading-snug line-clamp-2 mt-0.5" style={{ color: descriptionColor }}>{d.description}</p>
+                            )}
                           </div>
-                        )}
-                        {restaurant.frameUrl && (
-                          <div
-                            className="absolute inset-0 w-full h-full pointer-events-none"
-                            style={{
-                              backgroundImage: `url(${restaurant.frameUrl})`,
-                              backgroundSize: "111% 111%",
-                              backgroundPosition: "center",
-                              backgroundRepeat: "no-repeat",
-                            }}
-                          />
-                        )}
+                          <p className="font-bold text-sm mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                        </div>
+                        <div className="w-20 h-20 shrink-0 aspect-square relative overflow-visible bg-[#2d2926] rounded-lg">
+                          {d.imageUrl ? (
+                            <img
+                              src={d.imageUrl}
+                              alt={d.title}
+                              className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div
+                              className="absolute inset-0 w-full h-full flex items-center justify-center rounded-lg"
+                              style={{ backgroundColor: primaryColor + "40" }}
+                            >
+                              <span className="text-xl text-white/50">?</span>
+                            </div>
+                          )}
+                          {restaurant.frameUrl && (
+                            <div
+                              className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
+                              style={{
+                                backgroundImage: `url(${restaurant.frameUrl})`,
+                                backgroundSize: "111% 111%",
+                                backgroundPosition: "center",
+                                backgroundRepeat: "no-repeat",
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
-                      <div className="w-full pt-2 text-center space-y-0.5">
-                        <h3 className="font-semibold text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
-                        <p className="font-bold text-base -mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </section>
             ))}
           </div>

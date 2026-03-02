@@ -34,6 +34,7 @@ export default async function RestaurantMenuPage({
         textColor: restaurant.textColor,
         descriptionColor: restaurant.descriptionColor,
         priceColor: restaurant.priceColor,
+        menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
       }}
       categories={restaurant.categories.map((c) => ({
         id: c.id,
