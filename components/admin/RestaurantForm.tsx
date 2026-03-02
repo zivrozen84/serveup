@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from "react";
 
-const DEFAULT_FRAMES = ["/frames/1.png", "/frames/2.png", "/frames/3.png"];
+const DEFAULT_FRAMES = [
+  "/frames/1.png",
+  "/frames/2.png",
+  "/frames/3.png",
+  "/frames/4.png",
+  "/frames/5.png",
+  "/frames/6.png",
+  "/frames/7.png",
+  "/frames/8.png",
+  "/frames/9.png",
+];
 const NO_FRAME = "";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
