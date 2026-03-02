@@ -82,9 +82,9 @@ export default async function RestaurantEditPage({
             city: restaurant.city,
             primaryColor: restaurant.primaryColor,
             isActive: restaurant.isActive,
-            logoUrl: restaurant.logoUrl,
-            bannerUrl: restaurant.bannerUrl,
-            backgroundUrl: restaurant.backgroundUrl,
+      logoUrl: restaurant.logoUrl,
+      bannerUrl: restaurant.bannerUrl,
+      backgroundUrl: restaurant.backgroundUrl,
           }}
         />
         <div className="mt-12">

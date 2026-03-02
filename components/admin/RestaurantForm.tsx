@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+const DEFAULT_FRAMES = ["/frames/1.png", "/frames/2.png"];
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +22,8 @@ interface RestaurantFormProps {
     logoUrl?: string | null;
     bannerUrl?: string | null;
     backgroundUrl?: string | null;
+    frameUrl?: string | null;
+    frameVariants?: string | null;
   };
 }
 
@@ -33,8 +37,16 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
   const [city, setCity] = useState(initialData?.city ?? "");
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor ?? "#c2410c");
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
-  const [logoUrl, setLogoUrl] = useState(initialData?.logoUrl ?? "");
   const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl ?? "");
+  const [frameUrl, setFrameUrl] = useState(initialData?.frameUrl ?? DEFAULT_FRAMES[0]);
+  const [frameVariants, setFrameVariants] = useState<string[]>(() => {
+    try {
+      const v = initialData?.frameVariants;
+      return v ? JSON.parse(v) : [];
+    } catch {
+      return [];
+    }
+  });
   const [backgroundUrl, setBackgroundUrl] = useState(initialData?.backgroundUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<Record<string, string[]>>({});
@@ -51,7 +63,7 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
     }
   }, [name, initialData]);
 
-  async function handleUpload(field: "logoUrl" | "bannerUrl" | "backgroundUrl", file: File) {
+  async function handleUpload(field: "bannerUrl" | "backgroundUrl" | "frame", file: File) {
     setUploading(true);
     setError((p) => ({ ...p, [field]: [] }));
     const fd = new FormData();
@@ -60,9 +72,15 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) {
-        if (field === "logoUrl") setLogoUrl(data.url);
         if (field === "bannerUrl") setBannerUrl(data.url);
         if (field === "backgroundUrl") setBackgroundUrl(data.url);
+        if (field === "frame") {
+          setFrameVariants((p) => {
+            const next = [...p, data.url];
+            if (p.length === 0) setFrameUrl(data.url);
+            return next.slice(-10);
+          });
+        }
       } else setError((p) => ({ ...p, [field]: [data.error || "שגיאה"] }));
     } catch {
       setError((p) => ({ ...p, [field]: ["שגיאה בהעלאה"] }));
@@ -88,8 +106,10 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
         city,
         primaryColor,
         isActive,
-        logoUrl: logoUrl || undefined,
+        ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
         bannerUrl: bannerUrl || undefined,
+        frameUrl: frameUrl || undefined,
+        frameVariants: frameVariants.length ? JSON.stringify(frameVariants) : undefined,
         backgroundUrl: backgroundUrl || undefined,
       }),
     });
@@ -101,12 +121,6 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
       setError(data.error || { form: [data.message || "שגיאה"] });
     }
   }
-
-  const labels = {
-    logoUrl: "לוגו",
-    bannerUrl: "באנר",
-    backgroundUrl: "רקע תפריט",
-  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -169,40 +183,102 @@ export function RestaurantForm({ initialData }: RestaurantFormProps) {
           <Label htmlFor="isActive">פעיל</Label>
         </div>
       </div>
-      {(["logoUrl", "bannerUrl", "backgroundUrl"] as const).map((field) => (
-        <div key={field}>
-          <Label>{labels[field]}</Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              value={field === "logoUrl" ? logoUrl : field === "bannerUrl" ? bannerUrl : backgroundUrl}
+      <div>
+        <Label>באנר</Label>
+        <div className="flex gap-2 mt-1">
+          <Input
+            value={bannerUrl}
+            onChange={(e) => setBannerUrl(e.target.value)}
+            placeholder="URL או העלאת קובץ"
+          />
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
               onChange={(e) => {
-                if (field === "logoUrl") setLogoUrl(e.target.value);
-                if (field === "bannerUrl") setBannerUrl(e.target.value);
-                if (field === "backgroundUrl") setBackgroundUrl(e.target.value);
+                const f = e.target.files?.[0];
+                if (f) handleUpload("bannerUrl", f);
               }}
-              placeholder="URL או העלאת קובץ"
             />
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUpload(field, f);
-                }}
-              />
-              <span
-                className={`inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent ${uploading ? "opacity-50" : ""}`}
-              >
-                {uploading ? "מעלה..." : "העלה"}
-              </span>
-            </label>
-          </div>
-          {error[field] && <p className="text-sm text-destructive mt-1">{error[field][0]}</p>}
+            <span
+              className={`inline-flex items-center justify-center h-10 px-4 text-sm font-medium hover:opacity-80 ${uploading ? "opacity-50" : ""}`}
+              style={{ color: "#37C27D" }}
+            >
+              {uploading ? "מעלה..." : "העלה"}
+            </span>
+          </label>
         </div>
-      ))}
+        {error.bannerUrl && <p className="text-sm text-destructive mt-1">{error.bannerUrl[0]}</p>}
+      </div>
+      <div>
+        <Label>מסגרת</Label>
+        <div className="flex gap-2 mt-1 items-center flex-wrap">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUpload("frame", f);
+              }}
+            />
+            <span
+              className={`inline-flex items-center justify-center h-10 px-4 text-sm font-medium hover:opacity-80 ${uploading ? "opacity-50" : ""}`}
+              style={{ color: "#37C27D" }}
+            >
+              {uploading ? "מעלה..." : "העלה"}
+            </span>
+          </label>
+          <div className="flex gap-1 flex-wrap">
+            {[...DEFAULT_FRAMES, ...frameVariants].map((url) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setFrameUrl(url)}
+                className={`w-6 h-6 rounded overflow-hidden border-2 shrink-0 transition-opacity hover:opacity-90 ${
+                  frameUrl === url ? "border-[#37C27D]" : "border-white/20"
+                }`}
+              >
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-white/50 mt-1">לחץ על תמונה לבחירה</p>
+      </div>
+      <div>
+        <Label>רקע תפריט</Label>
+        <div className="flex gap-2 mt-1">
+          <Input
+            value={backgroundUrl}
+            onChange={(e) => setBackgroundUrl(e.target.value)}
+            placeholder="URL או העלאת קובץ"
+          />
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUpload("backgroundUrl", f);
+              }}
+            />
+            <span
+              className={`inline-flex items-center justify-center h-10 px-4 text-sm font-medium hover:opacity-80 ${uploading ? "opacity-50" : ""}`}
+              style={{ color: "#37C27D" }}
+            >
+              {uploading ? "מעלה..." : "העלה"}
+            </span>
+          </label>
+        </div>
+        {error.backgroundUrl && <p className="text-sm text-destructive mt-1">{error.backgroundUrl[0]}</p>}
+      </div>
       <Button type="submit" disabled={saving} className="text-white hover:opacity-90" style={{ backgroundColor: "#37C27D" }}>
         {saving ? "שומר..." : initialData?.id ? "עדכן" : "צור מסעדה"}
       </Button>

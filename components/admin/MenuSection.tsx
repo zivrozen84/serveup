@@ -53,6 +53,7 @@ function DraggableDishRow({
   onSave,
   onCancelEdit,
   onStartEdit,
+  onDelete,
 }: {
   dish: Dish;
   isDragging: boolean;
@@ -62,6 +63,7 @@ function DraggableDishRow({
   onSave: (e: React.FormEvent) => void;
   onCancelEdit: () => void;
   onStartEdit: () => void;
+  onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `dish-${dish.id}`,
@@ -95,9 +97,21 @@ function DraggableDishRow({
             <Button type="submit" size="sm" className="text-white" style={{ backgroundColor: "#37C27D" }}>
               שמור
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={onCancelEdit}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onCancelEdit}
+              className="bg-[#1A1D21] text-white border border-white/10 hover:bg-[#252830]"
+            >
               ביטול
             </Button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-red-400 hover:text-red-300 text-sm px-2"
+            >
+              הסר
+            </button>
           </div>
         </form>
       </div>
@@ -299,6 +313,17 @@ export function MenuSection({
     }
   }
 
+  async function deleteDish(dishId: number) {
+    const res = await fetch(`/api/admin/dishes/${dishId}`, { method: "DELETE" });
+    if (res.ok) {
+      setCategories((p) =>
+        p.map((c) => ({ ...c, dishes: c.dishes.filter((d) => d.id !== dishId) }))
+      );
+      if (editingDish?.id === dishId) setEditingDish(null);
+      router.refresh();
+    }
+  }
+
   return (
     <div>
       <h2 className="text-lg font-semibold mb-4">תפריט</h2>
@@ -365,6 +390,7 @@ export function MenuSection({
                           onSave={saveDish}
                           onCancelEdit={() => setEditingDish(null)}
                           onStartEdit={() => startEditDish(d)}
+                          onDelete={() => deleteDish(d.id)}
                         />
                       </div>
                     ))}

@@ -7,8 +7,9 @@ export default async function RestaurantMenuPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const restaurant = await prisma.restaurant.findUnique({
-    where: { slug: params.slug, isActive: true },
+    where: { slug, isActive: true },
     include: {
       categories: {
         orderBy: { sortOrder: "asc" },
