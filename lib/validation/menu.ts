@@ -15,6 +15,19 @@ export const dishSchema = z.object({
 });
 
 export const tableSchema = z.object({
-  tableNumber: z.number().int().positive("מספר שולחן חובה"),
+  tableNumber: z.number().int().positive("מספר שולחן חובה").optional(),
   description: z.string().optional(),
+  label: z.string().optional(),
+  capacity: z.number().int().min(0).optional(),
+  positionX: z.number().min(0).max(100).optional(),
+  positionY: z.number().min(0).max(100).optional(),
+  shape: z.enum(["circle", "rectangle", "door"]).optional(),
+});
+
+export const tableUpdateSchema = z.object({
+  label: z.string().optional(),
+  capacity: z.number().int().min(0).optional(),
+  positionX: z.number().min(0).max(100).optional(),
+  positionY: z.number().min(0).max(100).optional(),
+  shape: z.enum(["circle", "rectangle", "door"]).optional(),
 });

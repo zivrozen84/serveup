@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 interface Table {
   id: number;
   tableNumber: number;
+  label?: string | null;
+  capacity?: number;
   description: string | null;
   token: string;
 }
@@ -44,10 +46,10 @@ export function TablesSection({ restaurantId, tables }: { restaurantId: number; 
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">שולחנות</h2>
+      <h2 className="text-lg font-semibold mb-4 text-white">שולחנות</h2>
       <form onSubmit={handleAdd} className="flex gap-4 items-end p-4 rounded-lg bg-[#0e1118] border border-white/5 mb-4">
         <div>
-          <label className="text-sm">מספר שולחן</label>
+          <label className="text-sm text-white">מספר שולחן</label>
           <Input
             type="number"
             min={1}
@@ -61,7 +63,11 @@ export function TablesSection({ restaurantId, tables }: { restaurantId: number; 
       <div className="space-y-2">
         {list.map((t) => (
           <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-[#0e1118]">
-            <span className="font-medium">שולחן {t.tableNumber}</span>
+            <div className="flex flex-col">
+              <span className="font-medium text-white">
+                {t.label ?? t.tableNumber} - {t.capacity ?? 0} מקומות
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <code className="text-xs bg-[#1A1D21] px-2 py-1 rounded truncate max-w-[200px]">
                 /r/{t.token}

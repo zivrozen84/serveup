@@ -88,15 +88,24 @@ export default async function RestaurantEditPage({
         <Link href="/admin/restaurants" className="text-white/70 hover:text-white text-sm">
           ← חזרה למסעדות
         </Link>
-        <a
-          href={`/r/${restaurant.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm hover:opacity-80"
-          style={{ color: "#37C27D" }}
-        >
-          צפה בתפריט
-        </a>
+        <div className="flex gap-4">
+          <Link
+            href={`/admin/restaurants/${id}/map`}
+            className="text-sm hover:opacity-80"
+            style={{ color: "#4A90E2" }}
+          >
+            מפת מסעדה
+          </Link>
+          <a
+            href={`/r/${restaurant.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm hover:opacity-80"
+            style={{ color: "#37C27D" }}
+          >
+            צפה בתפריט
+          </a>
+        </div>
       </div>
       <h1 className="text-2xl font-bold mb-6 text-white">עריכת {restaurant.name}</h1>
       <RestaurantEditWithPreview

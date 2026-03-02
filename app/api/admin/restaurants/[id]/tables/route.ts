@@ -12,7 +12,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const restaurantId = parseInt(params.id);
+  const restaurantId = parseInt((await params).id);
   if (isNaN(restaurantId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const tables = await prisma.table.findMany({
@@ -29,20 +29,36 @@ export async function POST(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const restaurantId = parseInt(params.id);
+  const restaurantId = parseInt((await params).id);
   if (isNaN(restaurantId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const body = await request.json();
   const parsed = tableSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  const data = parsed.data;
+  let tableNumber = data.tableNumber;
+
+  if (tableNumber == null) {
+    const max = await prisma.table.aggregate({
+      where: { restaurantId },
+      _max: { tableNumber: true },
+    });
+    tableNumber = (max._max.tableNumber ?? 0) + 1;
+  }
+
   const token = randomBytes(16).toString("hex");
   const table = await prisma.table.create({
     data: {
       restaurantId,
-      tableNumber: parsed.data.tableNumber,
-      description: parsed.data.description ?? null,
+      tableNumber,
+      description: data.description ?? null,
       token,
+      label: data.label ?? null,
+      capacity: data.capacity ?? 2,
+      positionX: data.positionX ?? 50,
+      positionY: data.positionY ?? 50,
+      shape: data.shape ?? "rectangle",
     },
   });
   return NextResponse.json(table);

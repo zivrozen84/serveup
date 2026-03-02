@@ -225,7 +225,7 @@ function DraggableDishRow({
               type="button"
               size="sm"
               onClick={onCancelEdit}
-              className="bg-[#1A1D21] text-white border border-white/10 hover:bg-[#252830]"
+              className="bg-red-600 text-white border border-red-500/80 hover:bg-red-500"
             >
               ביטול
             </Button>
@@ -248,6 +248,7 @@ function DraggableDishRow({
       className={`flex items-center justify-between p-3 rounded-lg bg-[#1A1D21] border border-white/5 ${
         isDragging ? "opacity-50" : ""
       }`}
+      onDoubleClick={onStartEdit}
     >
       <div
         {...attributes}

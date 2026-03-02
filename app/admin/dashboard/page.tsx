@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { RestaurantEditChoiceDialog } from "@/components/admin/RestaurantEditChoiceDialog";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -86,9 +87,18 @@ export default async function DashboardPage() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <Link href={`/admin/restaurants/${r.id}`} className="text-sm hover:opacity-80" style={{ color: "#37C27D" }}>
-                        ערוך
-                      </Link>
+                      <RestaurantEditChoiceDialog
+                        restaurantId={r.id}
+                        restaurantName={r.name}
+                      >
+                        <button
+                          type="button"
+                          className="text-sm hover:opacity-80 cursor-pointer"
+                          style={{ color: "#37C27D" }}
+                        >
+                          ערוך
+                        </button>
+                      </RestaurantEditChoiceDialog>
                     </td>
                   </tr>
                 ))}

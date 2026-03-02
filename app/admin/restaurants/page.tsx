@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { RestaurantEditChoiceDialog } from "@/components/admin/RestaurantEditChoiceDialog";
 
 export default async function RestaurantsPage() {
   const session = await getServerSession(authOptions);
@@ -26,29 +27,35 @@ export default async function RestaurantsPage() {
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {restaurants.map((r) => (
-          <Link
+          <RestaurantEditChoiceDialog
             key={r.id}
-            href={`/admin/restaurants/${r.id}`}
-            className="rounded-xl border border-white/5 bg-[#0e1118] p-4 hover:border-[#37C27D]/50 transition-colors flex items-center gap-4"
+            restaurantId={r.id}
+            restaurantName={r.name}
+            primaryColor={r.primaryColor}
           >
-            <div
-              className="h-12 w-12 rounded-lg shrink-0 flex items-center justify-center text-white text-xl font-bold"
-              style={{ backgroundColor: r.primaryColor }}
+            <button
+              type="button"
+              className="rounded-xl border border-white/5 bg-[#0e1118] p-4 hover:border-[#37C27D]/50 transition-colors flex items-center gap-4 w-full text-right cursor-pointer"
             >
-              {r.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate text-white">{r.name}</p>
-              <p className="text-sm text-white/60">{r.city}</p>
-            </div>
-            <span
-              className={`text-xs px-2 py-1 rounded ${
-                r.isActive ? "bg-[#37C27D]/20 text-[#37C27D]" : "bg-white/10 text-white/60"
-              }`}
-            >
-              {r.isActive ? "פעיל" : "לא פעיל"}
-            </span>
-          </Link>
+              <div
+                className="h-12 w-12 rounded-lg shrink-0 flex items-center justify-center text-white text-xl font-bold"
+                style={{ backgroundColor: r.primaryColor }}
+              >
+                {r.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold truncate text-white">{r.name}</p>
+                <p className="text-sm text-white/60">{r.city}</p>
+              </div>
+              <span
+                className={`text-xs px-2 py-1 rounded ${
+                  r.isActive ? "bg-[#37C27D]/20 text-[#37C27D]" : "bg-white/10 text-white/60"
+                }`}
+              >
+                {r.isActive ? "פעיל" : "לא פעיל"}
+              </span>
+            </button>
+          </RestaurantEditChoiceDialog>
         ))}
       </div>
     </div>

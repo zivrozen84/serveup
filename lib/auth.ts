@@ -16,7 +16,10 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 60 * 60, // שעה – דורש התחברות מחדש כל פעם
+  },
   pages: { signIn: "/admin/login" },
   providers: [
     CredentialsProvider({
