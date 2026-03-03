@@ -80,3 +80,19 @@ html:has([data-admin]) body {
   touch-action: pan-x;
   scroll-behavior: auto; /* גלילה טבעית – לא חלקה מלאכותית שגורמת לתקיעות */
 }
+
+/* הרחבת מנה – סלייד מלמעלה */
+@keyframes modal-slide-in-top {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+@keyframes modal-slide-out-top {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100%); }
+}
+.modal-slide-panel[data-state="open"] {
+  animation: modal-slide-in-top 0.3s ease-out forwards;
+}
+.modal-slide-panel[data-state="closed"] {
+  animation: modal-slide-out-top 0.3s ease-out forwards;
+}

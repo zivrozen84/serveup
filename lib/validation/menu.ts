@@ -31,3 +31,16 @@ export const tableUpdateSchema = z.object({
   positionY: z.number().min(0).max(100).optional(),
   shape: z.enum(["circle", "rectangle", "door"]).optional(),
 });
+
+export const dishParameterCategorySchema = z.object({
+  name: z.string().min(1, "שם קטגוריית פרמטר חובה"),
+  sortOrder: z.number().int().min(0).optional(),
+  minSelections: z.number().int().min(0).optional(),
+  maxSelections: z.number().int().min(0).optional(),
+});
+
+export const dishParameterSchema = z.object({
+  name: z.string().min(1, "שם פרמטר חובה"),
+  sortOrder: z.number().int().min(0).optional(),
+  priceCents: z.number().int().min(0).optional(),
+});

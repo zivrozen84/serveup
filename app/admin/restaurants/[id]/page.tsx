@@ -20,8 +20,19 @@ export default async function RestaurantEditPage({
   const restaurant = await prisma.restaurant.findUnique({
     where: { id },
     include: {
-      categories: { include: { dishes: true }, orderBy: { sortOrder: "asc" } },
-      tables: true,
+      categories: {
+        include: {
+          dishes: {
+            include: {
+              paramCategories: {
+                include: { parameters: { orderBy: { sortOrder: "asc" } } },
+                orderBy: { sortOrder: "asc" },
+              },
+            },
+          },
+        },
+        orderBy: { sortOrder: "asc" },
+      },
     },
   });
   if (!restaurant) notFound();
@@ -54,6 +65,7 @@ export default async function RestaurantEditPage({
         description: d.description,
         allergens: d.allergens,
         priceCents: d.priceCents,
+        paramCategories: (d as { paramCategories?: Array<{ id: number; name: string; sortOrder: number; minSelections: number; maxSelections: number; parameters: Array<{ id: number; name: string; sortOrder: number; priceCents: number }> }> }).paramCategories ?? [],
       })),
     })),
   };
@@ -111,7 +123,6 @@ export default async function RestaurantEditPage({
       <RestaurantEditWithPreview
         menuProps={menuProps}
         formInitialData={formInitialData}
-        tables={restaurant.tables}
       />
     </>
   );

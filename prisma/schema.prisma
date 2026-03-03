@@ -95,9 +95,36 @@ model Dish {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  paramCategories DishParameterCategory[]
 
   @@map("dishes")
+}
+
+model DishParameterCategory {
+  id           Int    @id @default(autoincrement())
+  dishId       Int
+  name         String   // למשל "בחרו לחם"
+  sortOrder    Int      @default(0)
+  minSelections Int     @default(0)
+  maxSelections Int     @default(1)
+
+  dish       Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  parameters DishParameter[]
+
+  @@map("dish_parameter_categories")
+}
+
+model DishParameter {
+  id         Int    @id @default(autoincrement())
+  categoryId Int
+  name       String   // למשל "פיתה", "באגט"
+  sortOrder  Int      @default(0)
+  priceCents Int      @default(0)   // תוספת מחיר (אופציונלי)
+
+  category DishParameterCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("dish_parameters")
 }
 
 model Table {

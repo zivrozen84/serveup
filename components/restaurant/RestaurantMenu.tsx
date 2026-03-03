@@ -1,12 +1,22 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { DishExpansionModal, type DishForExpansion } from "./DishExpansionModal";
 
 const PHONE_WIDTH = 420;
 
 function formatPrice(cents: number): string {
   const n = cents / 100;
   return n % 1 === 0 ? n.toString() : parseFloat(n.toFixed(2)).toString();
+}
+
+interface ParamCategory {
+  id: number;
+  name: string;
+  sortOrder: number;
+  minSelections: number;
+  maxSelections: number;
+  parameters: Array<{ id: number; name: string; sortOrder: number; priceCents: number }>;
 }
 
 interface Dish {
@@ -16,6 +26,7 @@ interface Dish {
   description: string | null;
   allergens: string | null;
   priceCents: number;
+  paramCategories?: ParamCategory[];
 }
 
 interface Category {
@@ -47,24 +58,31 @@ interface RestaurantMenuProps {
   categories: Category[];
   /** תצוגה מקדימה – תמיד מסגרת טלפון גם במסך רחב */
   forcePreview?: boolean;
+  /** תצוגת לקוח (צפה בתפריט) – אותה תצוגה במסגרת אייפון, עם הרחבת מנה */
+  phoneLayout?: boolean;
+  /** בתצוגה מקדימה: true = מנהל (כפתורי הוספת פרמטר/קטגוריה), false = לקוח */
+  isAdminPreview?: boolean;
 }
 
-export function RestaurantMenu({ restaurant, categories, forcePreview }: RestaurantMenuProps) {
+export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayout = false, isAdminPreview = false }: RestaurantMenuProps) {
   const [activeCat, setActiveCat] = useState(categories[0]?.id ?? null);
+  const [expansionDish, setExpansionDish] = useState<DishForExpansion | null>(null);
+  const [pressedDishId, setPressedDishId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const isJumpingRef = useRef(false);
   const [isNarrow, setIsNarrow] = useState(false);
 
   useEffect(() => {
-    if (forcePreview) return;
+    if (forcePreview || phoneLayout) return;
     const check = () => setIsNarrow(window.innerWidth < 500);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
-  }, [forcePreview]);
+  }, [forcePreview, phoneLayout]);
 
-  const showPhoneFrame = forcePreview || !isNarrow;
+  const showPhoneFrame = forcePreview || phoneLayout || !isNarrow;
+  const canExpandDish = forcePreview || phoneLayout;
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -73,7 +91,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
     if (catEl) catEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [activeCat]);
 
-  // רולטה אינסופית – התחלה במרכז, קפיצה חלקה כשמגיעים לקצה
+  // רולטה אינסופית – התחלה במרכז, קפיצה כשנכנסים לשליש שמאלי או ימני
   useEffect(() => {
     const el = carouselRef.current;
     if (!el || categories.length === 0) return;
@@ -85,16 +103,22 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
     const el = carouselRef.current;
     if (!el || isJumpingRef.current || categories.length === 0) return;
     const setWidth = el.scrollWidth / 3;
-    const { scrollLeft } = el;
-    const threshold = Math.min(80, setWidth * 0.15);
-    if (scrollLeft < threshold) {
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const threshold = 60;
+    const maxScroll = scrollWidth - clientWidth;
+
+    const inLeftThird = scrollLeft < setWidth * 0.5;
+    const inRightThird = scrollLeft > setWidth * 2.5;
+    const nearEnd = maxScroll > 0 && scrollLeft >= maxScroll - threshold;
+
+    if (inLeftThird) {
       isJumpingRef.current = true;
-      el.scrollTo({ left: scrollLeft + setWidth, behavior: "auto" });
-      setTimeout(() => { isJumpingRef.current = false; }, 150);
-    } else if (scrollLeft > setWidth * 2 - threshold) {
+      el.scrollLeft = scrollLeft + setWidth;
+      requestAnimationFrame(() => { isJumpingRef.current = false; });
+    } else if (inRightThird || nearEnd) {
       isJumpingRef.current = true;
-      el.scrollTo({ left: scrollLeft - setWidth, behavior: "auto" });
-      setTimeout(() => { isJumpingRef.current = false; }, 150);
+      el.scrollLeft = scrollLeft - setWidth;
+      requestAnimationFrame(() => { isJumpingRef.current = false; });
     }
   }, [categories.length]);
 
@@ -233,36 +257,49 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                   <div className="grid grid-cols-2 gap-4">
                     {(cat.dishes ?? []).map((d) => (
                       <div key={d.id} className="flex flex-col items-center">
-                        <div className="w-full aspect-square relative overflow-visible bg-[#2d2926]">
-                          {d.imageUrl ? (
-                            <img
-                              src={d.imageUrl}
-                              alt={d.title}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div
-                              className="absolute inset-0 w-full h-full flex items-center justify-center"
-                              style={{ backgroundColor: primaryColor + "40" }}
-                            >
-                              <span className="text-4xl text-white/50">?</span>
-                            </div>
+                        <div
+                          role={canExpandDish ? "button" : undefined}
+                          tabIndex={canExpandDish ? 0 : undefined}
+                          onClick={canExpandDish ? () => setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] }) : undefined}
+                          onPointerDown={canExpandDish ? () => setPressedDishId(d.id) : undefined}
+                          onPointerUp={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          onPointerLeave={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          className={`w-full flex flex-col items-center overflow-hidden rounded-lg relative transition-transform duration-150 select-none ${canExpandDish ? "cursor-pointer active:outline-none" : ""} ${pressedDishId === d.id ? "scale-90" : ""}`}
+                        >
+                          {canExpandDish && (
+                            <div className={`absolute inset-0 rounded-lg bg-black/40 transition-opacity duration-150 pointer-events-none z-10 ${pressedDishId === d.id ? "opacity-100" : "opacity-0"}`} />
                           )}
-                          {restaurant.frameUrl && (
-                            <div
-                              className="absolute inset-0 w-full h-full pointer-events-none"
-                              style={{
-                                backgroundImage: `url(${restaurant.frameUrl})`,
-                                backgroundSize: "111% 111%",
-                                backgroundPosition: "center",
-                                backgroundRepeat: "no-repeat",
-                              }}
-                            />
-                          )}
-                        </div>
-                        <div className="w-full pt-2 text-center space-y-0.5">
-                          <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
-                          <p className="font-bold menu-text-base -mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          <div className="w-full aspect-square relative overflow-hidden bg-[#2d2926] rounded-t-lg">
+                            {d.imageUrl ? (
+                              <img
+                                src={d.imageUrl}
+                                alt={d.title}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 w-full h-full flex items-center justify-center"
+                                style={{ backgroundColor: primaryColor + "40" }}
+                              >
+                                <span className="text-4xl text-white/50">?</span>
+                              </div>
+                            )}
+                            {restaurant.frameUrl && (
+                              <div
+                                className="absolute inset-0 w-full h-full pointer-events-none"
+                                style={{
+                                  backgroundImage: `url(${restaurant.frameUrl})`,
+                                  backgroundSize: "111% 111%",
+                                  backgroundPosition: "center",
+                                  backgroundRepeat: "no-repeat",
+                                }}
+                              />
+                            )}
+                          </div>
+                          <div className="w-full pt-2 text-center space-y-0.5 rounded-b-lg relative z-[1]">
+                            <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                            <p className="font-bold menu-text-base -mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -270,40 +307,57 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                 ) : displayFormat === "compact" ? (
                   <div className="flex flex-col">
                     {(cat.dishes ?? []).map((d) => (
-                      <div key={d.id} className="flex gap-3 items-start flex-row-reverse py-3 border-b-2 border-white/20 last:border-b-0">
-                        <div className="w-20 h-20 shrink-0 aspect-square relative overflow-visible bg-[#2d2926] rounded-lg">
-                          {d.imageUrl ? (
-                            <img
-                              src={d.imageUrl}
-                              alt={d.title}
-                              className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div
-                              className="absolute inset-0 w-full h-full flex items-center justify-center rounded-lg"
-                              style={{ backgroundColor: primaryColor + "40" }}
-                            >
-                              <span className="text-xl text-white/50">?</span>
-                            </div>
+                      <div
+                        key={d.id}
+                        className="py-3 border-b-2 border-white/20 last:border-b-0"
+                      >
+                        <div
+                          role={canExpandDish ? "button" : undefined}
+                          tabIndex={canExpandDish ? 0 : undefined}
+                          onClick={canExpandDish ? () => setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] }) : undefined}
+                          onPointerDown={canExpandDish ? () => setPressedDishId(d.id) : undefined}
+                          onPointerUp={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          onPointerLeave={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          onKeyDown={canExpandDish ? (e) => e.key === "Enter" && setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] }) : undefined}
+                          className={`flex gap-3 items-start flex-row-reverse rounded-lg overflow-hidden relative transition-transform duration-150 ${canExpandDish ? "cursor-pointer" : ""} ${pressedDishId === d.id ? "scale-[0.97]" : ""}`}
+                        >
+                          {canExpandDish && (
+                            <div className={`absolute inset-0 rounded-lg bg-black/40 transition-opacity duration-150 pointer-events-none z-10 ${pressedDishId === d.id ? "opacity-100" : "opacity-0"}`} />
                           )}
-                          {restaurant.frameUrl && (
-                            <div
-                              className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
-                              style={{
-                                backgroundImage: `url(${restaurant.frameUrl})`,
-                                backgroundSize: "111% 111%",
-                                backgroundPosition: "center",
-                                backgroundRepeat: "no-repeat",
-                              }}
-                            />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 flex flex-col gap-0.5 pt-0.5">
-                          <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
-                          {d.description && (
-                            <p className="menu-text-xs leading-snug line-clamp-2" style={{ color: descriptionColor }}>{d.description}</p>
-                          )}
-                          <p className="font-bold menu-text-sm" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          <div className="w-20 h-20 shrink-0 aspect-square relative overflow-hidden bg-[#2d2926] rounded-lg">
+                            {d.imageUrl ? (
+                              <img
+                                src={d.imageUrl}
+                                alt={d.title}
+                                className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 w-full h-full flex items-center justify-center rounded-lg"
+                                style={{ backgroundColor: primaryColor + "40" }}
+                              >
+                                <span className="text-xl text-white/50">?</span>
+                              </div>
+                            )}
+                            {restaurant.frameUrl && (
+                              <div
+                                className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
+                                style={{
+                                  backgroundImage: `url(${restaurant.frameUrl})`,
+                                  backgroundSize: "111% 111%",
+                                  backgroundPosition: "center",
+                                  backgroundRepeat: "no-repeat",
+                                }}
+                              />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col gap-0.5 pt-0.5 relative z-[1]">
+                            <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                            {d.description && (
+                              <p className="menu-text-xs leading-snug line-clamp-2" style={{ color: descriptionColor }}>{d.description}</p>
+                            )}
+                            <p className="font-bold menu-text-sm" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -311,42 +365,59 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
                 ) : (
                   <div className="flex flex-col">
                     {(cat.dishes ?? []).map((d) => (
-                      <div key={d.id} className="flex gap-3 items-start flex-row-reverse py-3 border-b-2 border-white/20 last:border-b-0">
-                        <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-between min-h-[88px] text-left">
-                          <div>
-                            <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
-                            {d.description && (
-                              <p className="menu-text-xs leading-snug line-clamp-2 mt-0.5" style={{ color: descriptionColor }}>{d.description}</p>
+                      <div
+                        key={d.id}
+                        className="py-3 border-b-2 border-white/20 last:border-b-0"
+                      >
+                        <div
+                          role={canExpandDish ? "button" : undefined}
+                          tabIndex={canExpandDish ? 0 : undefined}
+                          onClick={canExpandDish ? () => setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] }) : undefined}
+                          onPointerDown={canExpandDish ? () => setPressedDishId(d.id) : undefined}
+                          onPointerUp={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          onPointerLeave={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          onKeyDown={canExpandDish ? (e) => e.key === "Enter" && setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] }) : undefined}
+                          className={`flex gap-3 items-start flex-row-reverse rounded-lg overflow-hidden relative transition-transform duration-150 ${canExpandDish ? "cursor-pointer" : ""} ${pressedDishId === d.id ? "scale-[0.97]" : ""}`}
+                        >
+                          {canExpandDish && (
+                            <div className={`absolute inset-0 rounded-lg bg-black/40 transition-opacity duration-150 pointer-events-none z-10 ${pressedDishId === d.id ? "opacity-100" : "opacity-0"}`} />
+                          )}
+                          <div className="flex-1 min-w-0 flex flex-col gap-0.5 justify-between min-h-[88px] text-left relative z-[1]">
+                            <div>
+                              <h3 className="font-semibold menu-text-sm leading-tight" style={{ color: textColor }}>{d.title}</h3>
+                              {d.description && (
+                                <p className="menu-text-xs leading-snug line-clamp-2 mt-0.5" style={{ color: descriptionColor }}>{d.description}</p>
+                              )}
+                            </div>
+                            <p className="font-bold menu-text-sm mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          </div>
+                          <div className="w-20 h-20 shrink-0 aspect-square relative overflow-hidden bg-[#2d2926] rounded-lg">
+                            {d.imageUrl ? (
+                              <img
+                                src={d.imageUrl}
+                                alt={d.title}
+                                className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 w-full h-full flex items-center justify-center rounded-lg"
+                                style={{ backgroundColor: primaryColor + "40" }}
+                              >
+                                <span className="text-xl text-white/50">?</span>
+                              </div>
+                            )}
+                            {restaurant.frameUrl && (
+                              <div
+                                className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
+                                style={{
+                                  backgroundImage: `url(${restaurant.frameUrl})`,
+                                  backgroundSize: "111% 111%",
+                                  backgroundPosition: "center",
+                                  backgroundRepeat: "no-repeat",
+                                }}
+                              />
                             )}
                           </div>
-                          <p className="font-bold menu-text-sm mt-1" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
-                        </div>
-                        <div className="w-20 h-20 shrink-0 aspect-square relative overflow-visible bg-[#2d2926] rounded-lg">
-                          {d.imageUrl ? (
-                            <img
-                              src={d.imageUrl}
-                              alt={d.title}
-                              className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div
-                              className="absolute inset-0 w-full h-full flex items-center justify-center rounded-lg"
-                              style={{ backgroundColor: primaryColor + "40" }}
-                            >
-                              <span className="text-xl text-white/50">?</span>
-                            </div>
-                          )}
-                          {restaurant.frameUrl && (
-                            <div
-                              className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
-                              style={{
-                                backgroundImage: `url(${restaurant.frameUrl})`,
-                                backgroundSize: "111% 111%",
-                                backgroundPosition: "center",
-                                backgroundRepeat: "no-repeat",
-                              }}
-                            />
-                          )}
                         </div>
                       </div>
                     ))}
@@ -360,31 +431,60 @@ export function RestaurantMenu({ restaurant, categories, forcePreview }: Restaur
     </div>
   );
 
-  if (!showPhoneFrame) {
-    return (
-      <div className="min-h-screen flex justify-center bg-stone-900">
-        <div style={{ width: PHONE_WIDTH, maxWidth: "100%" }}>
-          {content}
-        </div>
-      </div>
-    );
-  }
+  const phoneContainerClass = "relative overflow-hidden bg-black rounded-[2rem]";
+  const phoneContainerStyle = { width: PHONE_WIDTH, maxWidth: "100%" };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
-      <div
-        className="rounded-[2.5rem] bg-black p-2 shadow-2xl"
-        style={{ width: PHONE_WIDTH, maxWidth: "100%" }}
-      >
-        <div className="rounded-[2rem] overflow-hidden bg-black">
-          <div className="h-6 bg-black flex justify-center">
-            <div className="w-24 h-4 bg-stone-900 rounded-full" />
-          </div>
-          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: "min(90vh, 700px)" }}>
+    <>
+      {!showPhoneFrame ? (
+        <div className="min-h-screen flex justify-center bg-stone-900">
+          <div style={phoneContainerStyle} className="relative overflow-hidden">
             {content}
+            {expansionDish && canExpandDish && (
+              <DishExpansionModal
+                open={!!expansionDish}
+                onOpenChange={(open) => !open && setExpansionDish(null)}
+                dish={expansionDish}
+                primaryColor={primaryColor}
+                priceColor={priceColor}
+                textColor={textColor}
+                descriptionColor={descriptionColor}
+                isAdminMode={isAdminPreview}
+                embedInPhone
+              />
+            )}
           </div>
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
+          <div
+            className="rounded-[2.5rem] bg-black p-2 shadow-2xl"
+            style={phoneContainerStyle}
+          >
+            <div className={`${phoneContainerClass} flex flex-col`} style={{ maxHeight: "min(90vh, 700px)" }}>
+              <div className="h-6 bg-black flex justify-center shrink-0">
+                <div className="w-24 h-4 bg-stone-900 rounded-full" />
+              </div>
+              <div className="overflow-y-auto scrollbar-hide flex-1 min-h-0 overflow-x-hidden">
+                {content}
+              </div>
+              {expansionDish && canExpandDish && (
+                <DishExpansionModal
+                  open={!!expansionDish}
+                  onOpenChange={(open) => !open && setExpansionDish(null)}
+                  dish={expansionDish}
+                  primaryColor={primaryColor}
+                  priceColor={priceColor}
+                  textColor={textColor}
+                  descriptionColor={descriptionColor}
+                  isAdminMode={isAdminPreview}
+                  embedInPhone
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
