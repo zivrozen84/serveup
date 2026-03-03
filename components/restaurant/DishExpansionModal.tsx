@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
 function formatPrice(cents: number): string {
@@ -34,9 +34,19 @@ interface DishExpansionModalProps {
   priceColor: string;
   textColor: string;
   descriptionColor: string;
+  /** צבע כפתור הוסף לעגלה */
+  cartColor?: string;
+  /** צבע טקסט כפתור הוסף לעגלה */
+  cartTextColor?: string;
+  /** רקע אזור עגלה (URL תמונה) */
+  cartBackgroundUrl?: string | null;
   isAdminMode: boolean;
-  /** כשמופעל – המודאל נשאר בתוך מסגרת האייפון (ללא פורטל) */
   embedInPhone?: boolean;
+  copiedParamSourceDishId?: number | null;
+  onCopyParams?: () => void;
+  onPasteParams?: () => Promise<void>;
+  canPasteParams?: boolean;
+  onParamsUpdated?: () => void;
 }
 
 export function DishExpansionModal({
@@ -47,9 +57,19 @@ export function DishExpansionModal({
   priceColor,
   textColor,
   descriptionColor,
+  cartColor: cartColorProp,
+  cartTextColor: cartTextColorProp,
+  cartBackgroundUrl,
   isAdminMode,
   embedInPhone = false,
+  copiedParamSourceDishId,
+  onCopyParams,
+  onPasteParams,
+  canPasteParams,
+  onParamsUpdated,
 }: DishExpansionModalProps) {
+  const cartColor = cartColorProp || primaryColor;
+  const cartTextColor = cartTextColorProp || "#ffffff";
   const [paramCategories, setParamCategories] = useState<ParamCategory[]>(dish.paramCategories);
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [quantity, setQuantity] = useState(1);
@@ -57,6 +77,18 @@ export function DishExpansionModal({
   const [newParamName, setNewParamName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [pasting, setPasting] = useState(false);
+  const [editingParamPriceId, setEditingParamPriceId] = useState<number | null>(null);
+  const [editingParamPriceVal, setEditingParamPriceVal] = useState("");
+  const categoryRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [pressedParamKey, setPressedParamKey] = useState<string | null>(null);
+  const [priceBump, setPriceBump] = useState(false);
+  const prevPriceRef = useRef(0);
+  const [quantityPressed, setQuantityPressed] = useState<"minus" | "plus" | null>(null);
+  const [addButtonShrink, setAddButtonShrink] = useState(false);
+  const [cartBarGlow, setCartBarGlow] = useState(false);
+  const [highlightMissingCatId, setHighlightMissingCatId] = useState<number | null>(null);
 
   useEffect(() => {
     if (open) setParamCategories(dish.paramCategories);
@@ -95,6 +127,72 @@ export function DishExpansionModal({
     setSelections((s) => ({ ...s, [catId]: next }));
   };
 
+  const totalPriceCents =
+    dish.priceCents * quantity +
+    paramCategories.reduce((sum, cat) => {
+      const sel = selections[cat.id] ?? [];
+      const add = cat.parameters.filter((p) => sel.includes(p.id)).reduce((a, p) => a + p.priceCents, 0);
+      return sum + add * quantity;
+    }, 0);
+
+  const setCategoryRequired = useCallback(
+    async (catId: number, required: boolean) => {
+      const min = required ? 1 : 0;
+      const res = await fetch(`/api/admin/parameter-categories/${catId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minSelections: min }),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setParamCategories((prev) =>
+        prev.map((c) => (c.id === catId ? { ...c, minSelections: updated.minSelections } : c))
+      );
+      onParamsUpdated?.();
+    },
+    [onParamsUpdated]
+  );
+
+  const setCategoryMultiple = useCallback(
+    async (catId: number, allowMultiple: boolean) => {
+      const max = allowMultiple ? 10 : 1;
+      const res = await fetch(`/api/admin/parameter-categories/${catId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxSelections: max }),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setParamCategories((prev) =>
+        prev.map((c) => (c.id === catId ? { ...c, maxSelections: updated.maxSelections } : c))
+      );
+      onParamsUpdated?.();
+    },
+    [onParamsUpdated]
+  );
+
+  const saveParamPrice = useCallback(
+    async (paramId: number, cents: number) => {
+      const res = await fetch(`/api/admin/parameters/${paramId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceCents: cents }),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setParamCategories((prev) =>
+        prev.map((c) => ({
+          ...c,
+          parameters: c.parameters.map((p) => (p.id === paramId ? { ...p, priceCents: updated.priceCents } : p)),
+        }))
+      );
+      setEditingParamPriceId(null);
+      setEditingParamPriceVal("");
+      onParamsUpdated?.();
+    },
+    [onParamsUpdated]
+  );
+
   const addParameter = useCallback(
     async (categoryId: number) => {
       if (!newParamName.trim()) return;
@@ -128,10 +226,32 @@ export function DishExpansionModal({
     setParamCategories((prev) => [...prev, created]);
     setNewCategoryName("");
     setAddingCategory(false);
-  }, [dish.id, newCategoryName]);
+    onParamsUpdated?.();
+  }, [dish.id, newCategoryName, onParamsUpdated]);
+
+  const firstMissingRequiredCatId = paramCategories.find((cat) => cat.minSelections >= 1 && ((selections[cat.id] ?? []).length < cat.minSelections))?.id ?? null;
+
+  // Clear highlight when user has selected enough in the highlighted category
+  useEffect(() => {
+    if (highlightMissingCatId == null) return;
+    const cat = paramCategories.find((c) => c.id === highlightMissingCatId);
+    if (cat && (selections[cat.id] ?? []).length >= cat.minSelections) setHighlightMissingCatId(null);
+  }, [highlightMissingCatId, paramCategories, selections]);
+
+  useEffect(() => {
+    if (totalPriceCents > prevPriceRef.current) {
+      setPriceBump(true);
+      const t = setTimeout(() => setPriceBump(false), 300);
+      return () => clearTimeout(t);
+    }
+    prevPriceRef.current = totalPriceCents;
+  }, [totalPriceCents]);
+  useEffect(() => {
+    if (open) prevPriceRef.current = totalPriceCents;
+  }, [open]);
 
   const content = (
-    <div className={`flex flex-col w-full h-full bg-stone-900 text-white rounded-t-2xl overflow-hidden ${embedInPhone ? "max-h-full" : "max-w-[420px] mx-auto max-h-[85vh] shadow-2xl"}`}>
+    <div className={`flex flex-col w-full h-full min-h-0 bg-stone-900 text-white rounded-t-2xl overflow-hidden ${embedInPhone ? "max-h-full" : "max-w-[420px] mx-auto max-h-[85vh] shadow-2xl"}`}>
       <div className="relative shrink-0 h-[180px] bg-stone-800">
         {dish.imageUrl ? (
           <img src={dish.imageUrl} alt={dish.title} className="w-full h-full object-cover object-center" />
@@ -144,19 +264,83 @@ export function DishExpansionModal({
           ✕
         </Dialog.Close>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        ref={scrollAreaRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4"
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehaviorY: "contain" }}
+      >
         <div>
           <h2 className="text-xl font-bold" style={{ color: textColor }}>{dish.title}</h2>
-          <p className="font-bold mt-1" style={{ color: priceColor }}>₪{formatPrice(dish.priceCents)}</p>
           {dish.description && (
             <p className="text-sm mt-2 leading-relaxed" style={{ color: descriptionColor }}>{dish.description}</p>
           )}
         </div>
 
+        {isAdminMode && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              type="button"
+              onClick={onCopyParams}
+              className="py-2 px-3 rounded-lg border border-white/40 text-white/90 text-sm hover:bg-white/10"
+            >
+              העתק פרמטרים
+            </button>
+            <button
+              type="button"
+              disabled={!canPasteParams || pasting}
+              onClick={async () => {
+                if (!onPasteParams) return;
+                setPasting(true);
+                try {
+                  await onPasteParams();
+                } finally {
+                  setPasting(false);
+                }
+              }}
+              className="py-2 px-3 rounded-lg font-medium text-white disabled:opacity-50"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {pasting ? "מדביק…" : "הדבק פרמטרים"}
+            </button>
+          </div>
+        )}
+
         {paramCategories.map((cat) => (
-          <div key={cat.id} className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold text-white">{cat.name}</h3>
+          <div
+            key={cat.id}
+            ref={(el) => { categoryRefs.current[cat.id] = el; }}
+            className={`space-y-2 rounded-lg p-2 transition-colors duration-200 ${
+              highlightMissingCatId === cat.id ? "ring-2 ring-red-500/80 bg-red-500/10" : ""
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-white">{cat.name}</h3>
+                {!isAdminMode && highlightMissingCatId === cat.id && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold shrink-0" title="נא לבחור כאן">!</span>
+                )}
+                {isAdminMode ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryRequired(cat.id, cat.minSelections < 1)}
+                      className={`text-xs px-2 py-1 rounded ${cat.minSelections >= 1 ? "bg-amber-600/80 text-white" : "bg-white/20 text-white/80"}`}
+                    >
+                      {cat.minSelections >= 1 ? "חובה" : "לא חובה"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryMultiple(cat.id, cat.maxSelections <= 1)}
+                      className={`text-xs px-2 py-1 rounded ${cat.maxSelections > 1 ? "bg-emerald-600/80 text-white" : "bg-white/20 text-white/80"}`}
+                      title="ריבוי בחירות"
+                    >
+                      {cat.maxSelections > 1 ? "✓ ריבוי" : "בחירה אחת"}
+                    </button>
+                  </>
+                ) : cat.minSelections >= 1 ? (
+                  <span className="text-xs px-2 py-0.5 rounded bg-amber-600/80 text-white">חובה</span>
+                ) : null}
+              </div>
               {isAdminMode && (
                 <button
                   type="button"
@@ -187,40 +371,108 @@ export function DishExpansionModal({
               </div>
             )}
             {cat.maxSelections <= 1 ? (
-              <div className="flex flex-wrap gap-2">
-                {cat.parameters.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleParam(cat.id, p.id)}
-                    className={`px-4 py-2 rounded-full text-sm border ${(selections[cat.id] ?? []).includes(p.id) ? "border-current" : "border-white/40"}`}
-                    style={{
-                      backgroundColor: (selections[cat.id] ?? []).includes(p.id) ? primaryColor + "40" : "transparent",
-                      color: textColor,
-                    }}
-                  >
-                    {p.name}
-                    {p.priceCents > 0 && ` (+₪${formatPrice(p.priceCents)})`}
-                  </button>
-                ))}
+              <div className="flex flex-wrap gap-2 items-center">
+                {cat.parameters.map((p) => {
+                  const paramKey = `${cat.id}-${p.id}`;
+                  const isPressed = pressedParamKey === paramKey;
+                  return (
+                  <span key={p.id} className="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleParam(cat.id, p.id)}
+                      onPointerDown={() => setPressedParamKey(paramKey)}
+                      onPointerUp={() => setPressedParamKey(null)}
+                      onPointerLeave={() => setPressedParamKey(null)}
+                      className={`px-4 py-2 rounded-full text-sm border transition-transform duration-150 ${(selections[cat.id] ?? []).includes(p.id) ? "border-current" : "border-white/40"} ${isPressed ? "scale-110" : ""}`}
+                      style={{
+                        backgroundColor: (selections[cat.id] ?? []).includes(p.id) ? primaryColor + "40" : "transparent",
+                        color: textColor,
+                      }}
+                    >
+                      {p.name}
+                      {p.priceCents > 0 && ` (+₪${formatPrice(p.priceCents)})`}
+                        </button>
+                    {isAdminMode && (
+                      editingParamPriceId === p.id ? (
+                        <span className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={editingParamPriceVal}
+                            onChange={(e) => setEditingParamPriceVal(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && saveParamPrice(p.id, Math.max(0, Math.round((parseFloat(editingParamPriceVal || "0") || 0) * 100)))}
+                            className="w-14 px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white text-xs"
+                          />
+                          <button type="button" onClick={() => saveParamPrice(p.id, Math.max(0, Math.round((parseFloat(editingParamPriceVal || "0") || 0) * 100)))} className="text-xs text-white/80 hover:text-white">✓</button>
+                          <button type="button" onClick={() => { setEditingParamPriceId(null); setEditingParamPriceVal(""); }} className="text-xs text-white/80 hover:text-white">✕</button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setEditingParamPriceId(p.id); setEditingParamPriceVal((p.priceCents / 100).toString()); }}
+                          className="text-xs text-white/50 hover:text-white"
+                          title="ערוך מחיר תוספת"
+                        >
+                          {p.priceCents > 0 ? `₪${formatPrice(p.priceCents)}` : "0₪"}
+                        </button>
+                      )
+                    )}
+                  </span>
+                  );
+                })}
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {cat.parameters.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleParam(cat.id, p.id)}
-                    className={`px-4 py-2 rounded-full text-sm border ${(selections[cat.id] ?? []).includes(p.id) ? "border-current" : "border-white/40"}`}
-                    style={{
-                      backgroundColor: (selections[cat.id] ?? []).includes(p.id) ? primaryColor + "40" : "transparent",
-                      color: textColor,
-                    }}
-                  >
-                    {p.name}
-                    {p.priceCents > 0 && ` (+₪${formatPrice(p.priceCents)})`}
-                  </button>
-                ))}
+              <div className="flex flex-wrap gap-2 items-center">
+                {cat.parameters.map((p) => {
+                  const paramKey = `${cat.id}-${p.id}`;
+                  const isPressed = pressedParamKey === paramKey;
+                  return (
+                  <span key={p.id} className="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleParam(cat.id, p.id)}
+                      onPointerDown={() => setPressedParamKey(paramKey)}
+                      onPointerUp={() => setPressedParamKey(null)}
+                      onPointerLeave={() => setPressedParamKey(null)}
+                      className={`px-4 py-2 rounded-full text-sm border transition-transform duration-150 ${(selections[cat.id] ?? []).includes(p.id) ? "border-current" : "border-white/40"} ${isPressed ? "scale-110" : ""}`}
+                      style={{
+                        backgroundColor: (selections[cat.id] ?? []).includes(p.id) ? primaryColor + "40" : "transparent",
+                        color: textColor,
+                      }}
+                    >
+                      {p.name}
+                      {p.priceCents > 0 && ` (+₪${formatPrice(p.priceCents)})`}
+                    </button>
+                    {isAdminMode && (
+                      editingParamPriceId === p.id ? (
+                        <span className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={editingParamPriceVal}
+                            onChange={(e) => setEditingParamPriceVal(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && saveParamPrice(p.id, Math.max(0, Math.round((parseFloat(editingParamPriceVal || "0") || 0) * 100)))}
+                            className="w-14 px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white text-xs"
+                          />
+                          <button type="button" onClick={() => saveParamPrice(p.id, Math.max(0, Math.round((parseFloat(editingParamPriceVal || "0") || 0) * 100)))} className="text-xs text-white/80 hover:text-white">✓</button>
+                          <button type="button" onClick={() => { setEditingParamPriceId(null); setEditingParamPriceVal(""); }} className="text-xs text-white/80 hover:text-white">✕</button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setEditingParamPriceId(p.id); setEditingParamPriceVal((p.priceCents / 100).toString()); }}
+                          className="text-xs text-white/50 hover:text-white"
+                          title="ערוך מחיר תוספת"
+                        >
+                          {p.priceCents > 0 ? `₪${formatPrice(p.priceCents)}` : "0₪"}
+                        </button>
+                      )
+                    )}
+                  </span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -266,35 +518,77 @@ export function DishExpansionModal({
           </>
         )}
 
-        {!isAdminMode && (
-          <div className="flex items-center gap-4 pt-4">
-            <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
+      </div>
+      {!isAdminMode && (
+        <div
+          className="shrink-0 p-4 pt-2 border-t border-white/10 bg-cover bg-center relative"
+          style={
+            cartBackgroundUrl
+              ? { backgroundImage: `url(${cartBackgroundUrl})` }
+              : { backgroundColor: "#1c1917" }
+          }
+        >
+          {cartBackgroundUrl && <div className="absolute inset-0 bg-black/45" aria-hidden />}
+          <div className="relative flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white/15">
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold border border-white/40"
+                onPointerDown={() => setQuantityPressed("minus")}
+                onPointerUp={() => setQuantityPressed(null)}
+                onPointerLeave={() => setQuantityPressed(null)}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold transition-transform duration-150 select-none active:outline-none ${
+                  quantityPressed === "minus" ? "scale-110" : ""
+                }`}
+                style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
               >
-                −
+                <span className="text-2xl leading-none inline-flex items-center justify-center w-full h-full -translate-y-0.5">−</span>
               </button>
-              <span className="w-8 text-center font-semibold">{quantity}</span>
+              <span className="w-8 text-center font-bold text-white text-lg">{quantity}</span>
               <button
                 type="button"
                 onClick={() => setQuantity((q) => q + 1)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold border border-white/40"
+                onPointerDown={() => setQuantityPressed("plus")}
+                onPointerUp={() => setQuantityPressed(null)}
+                onPointerLeave={() => setQuantityPressed(null)}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold transition-transform duration-150 select-none active:outline-none ${
+                  quantityPressed === "plus" ? "scale-110" : ""
+                }`}
+                style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
               >
-                +
+                <span className="text-2xl leading-none inline-flex items-center justify-center w-full h-full -translate-y-0.5">+</span>
               </button>
             </div>
+            <span
+              className={`font-bold min-w-[4rem] inline-block transition-transform duration-200 ${priceBump ? "scale-110" : ""}`}
+              style={{ color: priceColor }}
+            >
+              ₪{formatPrice(totalPriceCents)}
+            </span>
             <button
               type="button"
-              className="flex-1 py-3 rounded-xl font-bold text-white"
-              style={{ backgroundColor: primaryColor }}
+              onClick={() => {
+                if (firstMissingRequiredCatId != null) {
+                  setAddButtonShrink(true);
+                  setCartBarGlow(true);
+                  setHighlightMissingCatId(firstMissingRequiredCatId);
+                  const el = categoryRefs.current[firstMissingRequiredCatId];
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  setTimeout(() => setAddButtonShrink(false), 200);
+                  setTimeout(() => setCartBarGlow(false), 200);
+                }
+                // when valid (firstMissingRequiredCatId == null), add-to-cart would go here if needed
+              }}
+              className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
+                addButtonShrink ? "scale-[0.85]" : "scale-100"
+              } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
+              style={{ backgroundColor: cartColor, color: cartTextColor }}
             >
               הוסף לעגלה
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 
@@ -309,7 +603,7 @@ export function DishExpansionModal({
     <>
       <Dialog.Overlay className={overlayClass} />
       <Dialog.Content className={contentWrapperClass}>
-        {embedInPhone ? <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{content}</div> : <div className="w-full max-w-[420px] max-h-[85vh] flex flex-col">{content}</div>}
+        {embedInPhone ? <div className="absolute inset-0 flex flex-col min-h-0 overflow-hidden">{content}</div> : <div className="w-full max-w-[420px] max-h-[85vh] flex flex-col">{content}</div>}
       </Dialog.Content>
     </>
   );

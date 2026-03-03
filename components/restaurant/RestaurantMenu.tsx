@@ -48,7 +48,10 @@ interface Restaurant {
   textColor?: string | null;
   descriptionColor?: string | null;
   priceColor?: string | null;
-  menuDisplayFormat?: "large" | "compact" | "imageRight";
+  cartColor?: string | null;
+  cartTextColor?: string | null;
+  cartBackgroundUrl?: string | null;
+  menuDisplayFormat?: "large" | "small" | "compact" | "imageRight";
   textSize?: number | null;
   fontFamily?: string | null;
 }
@@ -62,12 +65,18 @@ interface RestaurantMenuProps {
   phoneLayout?: boolean;
   /** בתצוגה מקדימה: true = מנהל (כפתורי הוספת פרמטר/קטגוריה), false = לקוח */
   isAdminPreview?: boolean;
+  /** מנות באותה מסעדה – להצגה ב"העתק פרמטרים ממנה" (מנהל) */
+  otherDishesForCopy?: Array<{ id: number; title: string }>;
+  /** רענון אחרי שינוי פרמטרים (מנהל) */
+  onParamsUpdated?: () => void;
 }
 
-export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayout = false, isAdminPreview = false }: RestaurantMenuProps) {
+export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayout = false, isAdminPreview = false, otherDishesForCopy, onParamsUpdated }: RestaurantMenuProps) {
   const [activeCat, setActiveCat] = useState(categories[0]?.id ?? null);
   const [expansionDish, setExpansionDish] = useState<DishForExpansion | null>(null);
   const [pressedDishId, setPressedDishId] = useState<number | null>(null);
+  const [copiedParamSourceDishId, setCopiedParamSourceDishId] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const isJumpingRef = useRef(false);
@@ -90,6 +99,15 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
     const catEl = el.querySelector(`[data-cat="${activeCat}"]`);
     if (catEl) catEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [activeCat]);
+
+  useEffect(() => {
+    if (!expansionDish) return;
+    const flat = categories.flatMap((c) => c.dishes);
+    const found = flat.find((d) => d.id === expansionDish.id);
+    if (found && (found.paramCategories?.length !== expansionDish.paramCategories?.length || found.paramCategories?.[0]?.id !== expansionDish.paramCategories?.[0]?.id)) {
+      setExpansionDish({ ...found, paramCategories: found.paramCategories ?? [] });
+    }
+  }, [categories]);
 
   // רולטה אינסופית – התחלה במרכז, קפיצה כשנכנסים לשליש שמאלי או ימני
   useEffect(() => {
@@ -157,6 +175,15 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const textColor = restaurant.textColor || "#fef3c7";
   const descriptionColor = restaurant.descriptionColor || "#fde68a";
   const priceColor = restaurant.priceColor || "#fffbeb";
+  const cartColor = restaurant.cartColor || primaryColor;
+  const cartTextColor = restaurant.cartTextColor || "#ffffff";
+  const cartBackgroundUrl = restaurant.cartBackgroundUrl || null;
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    const t = setTimeout(() => setToastMessage(null), 2500);
+    return () => clearTimeout(t);
+  }, []);
   const hasBg = !!restaurant.backgroundUrl;
   const displayFormat = restaurant.menuDisplayFormat ?? "large";
   const baseFontSize = restaurant.textSize ?? 16;
@@ -304,6 +331,57 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                       </div>
                     ))}
                   </div>
+                ) : displayFormat === "small" ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {(cat.dishes ?? []).map((d) => (
+                      <div key={d.id} className="flex flex-col items-center">
+                        <div
+                          role={canExpandDish ? "button" : undefined}
+                          tabIndex={canExpandDish ? 0 : undefined}
+                          onClick={canExpandDish ? () => setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] }) : undefined}
+                          onPointerDown={canExpandDish ? () => setPressedDishId(d.id) : undefined}
+                          onPointerUp={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          onPointerLeave={canExpandDish ? () => setPressedDishId(null) : undefined}
+                          className={`w-full flex flex-col items-center overflow-hidden rounded-lg relative transition-transform duration-150 select-none ${canExpandDish ? "cursor-pointer active:outline-none" : ""} ${pressedDishId === d.id ? "scale-90" : ""}`}
+                        >
+                          {canExpandDish && (
+                            <div className={`absolute inset-0 rounded-lg bg-black/40 transition-opacity duration-150 pointer-events-none z-10 ${pressedDishId === d.id ? "opacity-100" : "opacity-0"}`} />
+                          )}
+                          <div className="w-full aspect-square relative overflow-hidden bg-[#2d2926] rounded-t-lg">
+                            {d.imageUrl ? (
+                              <img
+                                src={d.imageUrl}
+                                alt={d.title}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 w-full h-full flex items-center justify-center"
+                                style={{ backgroundColor: primaryColor + "40" }}
+                              >
+                                <span className="text-2xl text-white/50">?</span>
+                              </div>
+                            )}
+                            {restaurant.frameUrl && (
+                              <div
+                                className="absolute inset-0 w-full h-full pointer-events-none"
+                                style={{
+                                  backgroundImage: `url(${restaurant.frameUrl})`,
+                                  backgroundSize: "111% 111%",
+                                  backgroundPosition: "center",
+                                  backgroundRepeat: "no-repeat",
+                                }}
+                              />
+                            )}
+                          </div>
+                          <div className="w-full pt-1 text-center space-y-0 rounded-b-lg relative z-[1]">
+                            <h3 className="font-semibold menu-text-xs leading-tight line-clamp-2" style={{ color: textColor }}>{d.title}</h3>
+                            <p className="font-bold menu-text-sm -mt-0.5" style={{ color: priceColor }}>₪{formatPrice(d.priceCents)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : displayFormat === "compact" ? (
                   <div className="flex flex-col">
                     {(cat.dishes ?? []).map((d) => (
@@ -436,6 +514,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
 
   return (
     <>
+      {toastMessage && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg bg-stone-800 text-white text-sm shadow-lg border border-white/20 animate-in fade-in duration-200"
+          role="status"
+        >
+          {toastMessage}
+        </div>
+      )}
       {!showPhoneFrame ? (
         <div className="min-h-screen flex justify-center bg-stone-900">
           <div style={phoneContainerStyle} className="relative overflow-hidden">
@@ -449,8 +535,35 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 priceColor={priceColor}
                 textColor={textColor}
                 descriptionColor={descriptionColor}
+                cartColor={cartColor}
+                cartTextColor={cartTextColor}
+                cartBackgroundUrl={cartBackgroundUrl}
                 isAdminMode={isAdminPreview}
                 embedInPhone
+                copiedParamSourceDishId={copiedParamSourceDishId}
+                onCopyParams={() => {
+                  setCopiedParamSourceDishId(expansionDish.id);
+                  showToast("פרמטרים הועתקו");
+                }}
+                onPasteParams={async () => {
+                  if (!copiedParamSourceDishId || copiedParamSourceDishId === expansionDish.id) return;
+                  const res = await fetch(`/api/admin/dishes/${expansionDish.id}/copy-parameters`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sourceDishId: copiedParamSourceDishId }),
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    setExpansionDish((prev) => (prev && prev.id === data.id ? { ...prev, paramCategories: data.paramCategories ?? [] } : prev));
+                    showToast("פרמטרים הודבקו");
+                    onParamsUpdated?.();
+                  } else {
+                    const data = await res.json().catch(() => ({}));
+                    alert(data.error || "שגיאה בהדבקת פרמטרים");
+                  }
+                }}
+                canPasteParams={!!copiedParamSourceDishId && copiedParamSourceDishId !== expansionDish.id}
+                onParamsUpdated={onParamsUpdated}
               />
             )}
           </div>
@@ -476,9 +589,36 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   primaryColor={primaryColor}
                   priceColor={priceColor}
                   textColor={textColor}
-                  descriptionColor={descriptionColor}
-                  isAdminMode={isAdminPreview}
-                  embedInPhone
+                descriptionColor={descriptionColor}
+                cartColor={cartColor}
+                cartTextColor={cartTextColor}
+                cartBackgroundUrl={cartBackgroundUrl}
+                isAdminMode={isAdminPreview}
+                embedInPhone
+                copiedParamSourceDishId={copiedParamSourceDishId}
+                onCopyParams={() => {
+                  setCopiedParamSourceDishId(expansionDish.id);
+                  showToast("פרמטרים הועתקו");
+                }}
+                onPasteParams={async () => {
+                  if (!copiedParamSourceDishId || copiedParamSourceDishId === expansionDish.id) return;
+                  const res = await fetch(`/api/admin/dishes/${expansionDish.id}/copy-parameters`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ sourceDishId: copiedParamSourceDishId }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setExpansionDish((prev) => (prev && prev.id === data.id ? { ...prev, paramCategories: data.paramCategories ?? [] } : prev));
+                      showToast("פרמטרים הודבקו");
+                      onParamsUpdated?.();
+                    } else {
+                      const data = await res.json().catch(() => ({}));
+                      alert(data.error || "שגיאה בהדבקת פרמטרים");
+                    }
+                  }}
+                  canPasteParams={!!copiedParamSourceDishId && copiedParamSourceDishId !== expansionDish.id}
+                  onParamsUpdated={onParamsUpdated}
                 />
               )}
             </div>

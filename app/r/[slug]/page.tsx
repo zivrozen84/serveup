@@ -45,6 +45,8 @@ export default async function RestaurantMenuPage({
           textColor: restaurant.textColor,
           descriptionColor: restaurant.descriptionColor,
           priceColor: restaurant.priceColor,
+          cartColor: (restaurant as { cartColor?: string | null }).cartColor ?? restaurant.primaryColor,
+          cartTextColor: (restaurant as { cartTextColor?: string | null }).cartTextColor ?? "#ffffff",
           menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
           textSize: (restaurant as { textSize?: number }).textSize ?? 16,
           fontFamily: (restaurant as { fontFamily?: string | null }).fontFamily ?? null,

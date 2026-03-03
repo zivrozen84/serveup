@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 
 interface RestaurantFormProps {
   onFrameChange?: (url: string) => void;
-  onMenuDisplayFormatChange?: (format: "large" | "compact" | "imageRight") => void;
+  onMenuDisplayFormatChange?: (format: "large" | "small" | "compact" | "imageRight") => void;
   initialData?: {
     id?: number;
     name: string;
@@ -35,6 +35,9 @@ interface RestaurantFormProps {
     textColor?: string | null;
     descriptionColor?: string | null;
     priceColor?: string | null;
+    cartColor?: string | null;
+    cartTextColor?: string | null;
+    cartBackgroundUrl?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
@@ -60,8 +63,11 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
   const [textColor, setTextColor] = useState(initialData?.textColor ?? "#fef3c7");
   const [descriptionColor, setDescriptionColor] = useState(initialData?.descriptionColor ?? "#fde68a");
   const [priceColor, setPriceColor] = useState(initialData?.priceColor ?? "#fffbeb");
-  const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "compact" | "imageRight">(
-    (initialData?.menuDisplayFormat as "large" | "compact" | "imageRight") ?? "large"
+  const [cartColor, setCartColor] = useState(initialData?.cartColor ?? initialData?.primaryColor ?? "#c2410c");
+  const [cartTextColor, setCartTextColor] = useState(initialData?.cartTextColor ?? "#ffffff");
+  const [cartBackgroundUrl, setCartBackgroundUrl] = useState(initialData?.cartBackgroundUrl ?? "");
+  const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "small" | "compact" | "imageRight">(
+    (initialData?.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large"
   );
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
   const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl ?? "");
@@ -86,7 +92,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
   }, [frameUrl, onFrameChange]);
 
   useEffect(() => {
-    const fmt = (initialData?.menuDisplayFormat as "large" | "compact") ?? "large";
+    const fmt = (initialData?.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large";
     setMenuDisplayFormat(fmt);
   }, [initialData?.menuDisplayFormat]);
 
@@ -101,44 +107,40 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
     }
   }, [name, initialData]);
 
-  async function handleUpload(field: "bannerUrl" | "backgroundUrl" | "frame", file: File) {
+  async function handleUploadFrame(file: File) {
     setUploading(true);
-    setError((p) => ({ ...p, [field]: [] }));
+    setError((p) => ({ ...p, frame: [] }));
     const fd = new FormData();
     fd.append("file", file);
     try {
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) {
-        if (field === "bannerUrl") setBannerUrl(data.url);
-        if (field === "backgroundUrl") setBackgroundUrl(data.url);
-        if (field === "frame") {
-          const nextVariants = [...frameVariants, data.url].slice(-10);
-          setFrameVariants(nextVariants);
-          if (frameVariants.length === 0 && initialData?.id) {
-            setFrameUrl(data.url);
-            onFrameChange?.(data.url);
-            setSavingFrame(true);
-            try {
-              const patchRes = await fetch(`/api/admin/restaurants/${initialData.id}/frame`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ frameUrl: data.url, frameVariants: JSON.stringify(nextVariants) }),
-              });
-              if (patchRes.ok) router.refresh();
-              else setError((p) => ({ ...p, frame: ["שגיאה בשמירת מסגרת"] }));
-            } catch {
-              setError((p) => ({ ...p, frame: ["שגיאה בשמירת מסגרת"] }));
-            }
-            setSavingFrame(false);
-          } else if (frameVariants.length === 0) {
-            setFrameUrl(data.url);
-            onFrameChange?.(data.url);
+        const nextVariants = [...frameVariants, data.url].slice(-10);
+        setFrameVariants(nextVariants);
+        if (frameVariants.length === 0 && initialData?.id) {
+          setFrameUrl(data.url);
+          onFrameChange?.(data.url);
+          setSavingFrame(true);
+          try {
+            const patchRes = await fetch(`/api/admin/restaurants/${initialData.id}/frame`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ frameUrl: data.url, frameVariants: JSON.stringify(nextVariants) }),
+            });
+            if (patchRes.ok) router.refresh();
+            else setError((p) => ({ ...p, frame: ["שגיאה בשמירת מסגרת"] }));
+          } catch {
+            setError((p) => ({ ...p, frame: ["שגיאה בשמירת מסגרת"] }));
           }
+          setSavingFrame(false);
+        } else if (frameVariants.length === 0) {
+          setFrameUrl(data.url);
+          onFrameChange?.(data.url);
         }
-      } else setError((p) => ({ ...p, [field]: [data.error || "שגיאה"] }));
+      } else setError((p) => ({ ...p, frame: [data.error || "שגיאה"] }));
     } catch {
-      setError((p) => ({ ...p, [field]: ["שגיאה בהעלאה"] }));
+      setError((p) => ({ ...p, frame: ["שגיאה בהעלאה"] }));
     }
     setUploading(false);
   }
@@ -151,12 +153,20 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data: unknown = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: "תגובת שרת לא תקינה" };
+      }
+    }
     if (res.ok) router.refresh();
     return { ok: res.ok, data };
   }
 
-  async function handleMenuDisplayFormatSelect(format: "large" | "compact" | "imageRight") {
+  async function handleMenuDisplayFormatSelect(format: "large" | "small" | "compact" | "imageRight") {
     setMenuDisplayFormat(format);
     onMenuDisplayFormatChange?.(format);
     if (!initialData?.id) return;
@@ -224,6 +234,9 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       textColor: textColor || null,
       descriptionColor: descriptionColor || null,
       priceColor: priceColor || null,
+      cartColor: cartColor || null,
+      cartTextColor: cartTextColor || null,
+      cartBackgroundUrl: cartBackgroundUrl?.trim() || null,
       menuDisplayFormat,
       isActive,
       ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
@@ -344,6 +357,30 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
             <Input value={priceColor} onChange={(e) => setPriceColor(e.target.value)} className="w-20 h-9 text-sm" />
           </div>
         </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע עגלה (הוסף לעגלה)</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={cartColor}
+              onChange={(e) => setCartColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={cartColor} onChange={(e) => setCartColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע טקסט בעגלה</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={cartTextColor}
+              onChange={(e) => setCartTextColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={cartTextColor} onChange={(e) => setCartTextColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -357,7 +394,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       </div>
       <div>
         <Label className="text-xs mb-2 block">תצוגת מנות בתפריט</Label>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={savingFormat}
@@ -373,6 +410,18 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           <button
             type="button"
             disabled={savingFormat}
+            onClick={() => handleMenuDisplayFormatSelect("small")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+              menuDisplayFormat === "small"
+                ? "bg-[#37C27D] text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            ריבועים קטנים
+          </button>
+          <button
+            type="button"
+            disabled={savingFormat}
             onClick={() => handleMenuDisplayFormatSelect("compact")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
               menuDisplayFormat === "compact"
@@ -380,7 +429,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
                 : "bg-white/10 text-white/70 hover:bg-white/20"
             }`}
           >
-            ריבועים קטנים (כותרת מימין)
+            רשימה ימין
           </button>
           <button
             type="button"
@@ -392,7 +441,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
                 : "bg-white/10 text-white/70 hover:bg-white/20"
             }`}
           >
-            תמונה ימין (כותרת שמאל)
+            רשימה שמאל
           </button>
           {savingFormat && <span className="text-xs text-white/60 self-center">שומר...</span>}
         </div>
@@ -400,31 +449,13 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       </div>
       <div>
         <Label>באנר</Label>
-        <div className="flex gap-2 mt-1">
-          <Input
-            value={bannerUrl}
-            onChange={(e) => setBannerUrl(e.target.value)}
-            placeholder="URL או העלאת קובץ"
-          />
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={uploading}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleUpload("bannerUrl", f);
-              }}
-            />
-            <span
-              className={`inline-flex items-center justify-center h-10 px-4 text-sm font-medium hover:opacity-80 ${uploading ? "opacity-50" : ""}`}
-              style={{ color: "#37C27D" }}
-            >
-              {uploading ? "מעלה..." : "העלה"}
-            </span>
-          </label>
-        </div>
+        <Input
+          type="url"
+          value={bannerUrl}
+          onChange={(e) => setBannerUrl(e.target.value)}
+          placeholder="https://..."
+          className="mt-1 w-full min-w-0"
+        />
         {error.bannerUrl && <p className="text-sm text-destructive mt-1">{error.bannerUrl[0]}</p>}
       </div>
       <div>
@@ -438,7 +469,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
               disabled={uploading}
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) handleUpload("frame", f);
+                if (f) handleUploadFrame(f);
               }}
             />
             <span
@@ -479,32 +510,24 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       </div>
       <div>
         <Label>רקע תפריט</Label>
-        <div className="flex gap-2 mt-1">
-          <Input
-            value={backgroundUrl}
-            onChange={(e) => setBackgroundUrl(e.target.value)}
-            placeholder="URL או העלאת קובץ"
-          />
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={uploading}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleUpload("backgroundUrl", f);
-              }}
-            />
-            <span
-              className={`inline-flex items-center justify-center h-10 px-4 text-sm font-medium hover:opacity-80 ${uploading ? "opacity-50" : ""}`}
-              style={{ color: "#37C27D" }}
-            >
-              {uploading ? "מעלה..." : "העלה"}
-            </span>
-          </label>
-        </div>
+        <Input
+          type="url"
+          value={backgroundUrl}
+          onChange={(e) => setBackgroundUrl(e.target.value)}
+          placeholder="https://..."
+          className="mt-1 w-full min-w-0"
+        />
         {error.backgroundUrl && <p className="text-sm text-destructive mt-1">{error.backgroundUrl[0]}</p>}
+      </div>
+      <div>
+        <Label>רקע עגלה (URL תמונה)</Label>
+        <Input
+          type="url"
+          value={cartBackgroundUrl}
+          onChange={(e) => setCartBackgroundUrl(e.target.value)}
+          placeholder="https://..."
+          className="mt-1 w-full min-w-0"
+        />
       </div>
       <Button type="submit" disabled={saving} className="text-white hover:opacity-90" style={{ backgroundColor: "#37C27D" }}>
         {saving ? "שומר..." : initialData?.id ? "עדכן" : "צור מסעדה"}

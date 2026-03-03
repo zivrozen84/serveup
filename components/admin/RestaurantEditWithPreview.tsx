@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { RestaurantForm } from "./RestaurantForm";
 import { RestaurantMenu } from "@/components/restaurant/RestaurantMenu";
 import { MenuSection } from "./MenuSection";
@@ -20,6 +21,9 @@ interface MenuProps {
     textColor?: string | null;
     descriptionColor?: string | null;
     priceColor?: string | null;
+    cartColor?: string | null;
+    cartTextColor?: string | null;
+    cartBackgroundUrl?: string | null;
     menuDisplayFormat?: string;
     textSize?: number | null;
     fontFamily?: string | null;
@@ -62,6 +66,9 @@ interface RestaurantEditWithPreviewProps {
     textColor?: string | null;
     descriptionColor?: string | null;
     priceColor?: string | null;
+    cartColor?: string | null;
+    cartTextColor?: string | null;
+    cartBackgroundUrl?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
@@ -79,21 +86,25 @@ export function RestaurantEditWithPreview({
   formInitialData,
   onMenuDisplayFormatChange,
 }: RestaurantEditWithPreviewProps) {
+  const router = useRouter();
   const [previewFrameUrl, setPreviewFrameUrl] = useState<string | null>(null);
-  const [previewMenuFormat, setPreviewMenuFormat] = useState<"large" | "compact" | "imageRight">(
-    (menuProps.restaurant.menuDisplayFormat as "large" | "compact" | "imageRight") ?? "large"
+  const [previewMenuFormat, setPreviewMenuFormat] = useState<"large" | "small" | "compact" | "imageRight">(
+    (menuProps.restaurant.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large"
   );
   const [previewTextSize, setPreviewTextSize] = useState<number | null>(null);
   const [previewFontFamily, setPreviewFontFamily] = useState<string | null | undefined>(undefined);
   const [isAdminPreview, setIsAdminPreview] = useState(true);
   const handleFrameChange = useCallback((url: string) => setPreviewFrameUrl(url), []);
-  const handleMenuFormatChange = useCallback((format: "large" | "compact" | "imageRight") => {
+  const handleMenuFormatChange = useCallback((format: "large" | "small" | "compact" | "imageRight") => {
     setPreviewMenuFormat(format);
     onMenuDisplayFormatChange?.(format);
   }, [onMenuDisplayFormatChange]);
 
   const previewRestaurant = {
     ...menuProps.restaurant,
+    cartColor: menuProps.restaurant.cartColor ?? menuProps.restaurant.primaryColor,
+    cartTextColor: menuProps.restaurant.cartTextColor ?? "#ffffff",
+    cartBackgroundUrl: menuProps.restaurant.cartBackgroundUrl ?? null,
     frameUrl: previewFrameUrl !== null ? previewFrameUrl : (menuProps.restaurant.frameUrl ?? ""),
     menuDisplayFormat: previewMenuFormat,
     textSize: previewTextSize ?? menuProps.restaurant.textSize ?? 16,
@@ -137,6 +148,8 @@ export function RestaurantEditWithPreview({
           categories={menuProps.categories}
           forcePreview
           isAdminPreview={isAdminPreview}
+          otherDishesForCopy={menuProps.categories.flatMap((c) => c.dishes.map((d) => ({ id: d.id, title: d.title })))}
+          onParamsUpdated={() => router.refresh()}
         />
         <TextSettingsSection
           restaurantId={menuProps.restaurant.id}
