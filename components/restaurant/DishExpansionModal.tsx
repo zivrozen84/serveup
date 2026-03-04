@@ -316,7 +316,7 @@ export function DishExpansionModal({
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-white">{cat.name}</h3>
-                {!isAdminMode && highlightMissingCatId === cat.id && (
+                {highlightMissingCatId === cat.id && (
                   <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold shrink-0" title="נא לבחור כאן">!</span>
                 )}
                 {isAdminMode ? (
@@ -519,9 +519,8 @@ export function DishExpansionModal({
         )}
 
       </div>
-      {!isAdminMode && (
-        <div
-          className="shrink-0 p-4 pt-2 border-t border-white/10 bg-cover bg-center relative"
+      <div
+        className="shrink-0 p-4 pt-2 border-t border-white/10 bg-cover bg-center relative"
           style={
             cartBackgroundUrl
               ? { backgroundImage: `url(${cartBackgroundUrl})` }
@@ -588,7 +587,6 @@ export function DishExpansionModal({
             </button>
           </div>
         </div>
-      )}
     </div>
   );
 

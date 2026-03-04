@@ -54,6 +54,8 @@ export default async function RestaurantEditPage({
       cartColor: (restaurant as { cartColor?: string | null }).cartColor ?? null,
       cartTextColor: (restaurant as { cartTextColor?: string | null }).cartTextColor ?? null,
       cartBackgroundUrl: (restaurant as { cartBackgroundUrl?: string | null }).cartBackgroundUrl ?? null,
+      bottomNavColor: (restaurant as { bottomNavColor?: string | null }).bottomNavColor ?? null,
+      bottomNavIconColor: (restaurant as { bottomNavIconColor?: string | null }).bottomNavIconColor ?? null,
       menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
       textSize: (restaurant as { textSize?: number }).textSize ?? 16,
       fontFamily: (restaurant as { fontFamily?: string | null }).fontFamily ?? null,
@@ -89,6 +91,8 @@ export default async function RestaurantEditPage({
     cartColor: (restaurant as { cartColor?: string | null }).cartColor ?? null,
     cartTextColor: (restaurant as { cartTextColor?: string | null }).cartTextColor ?? null,
     cartBackgroundUrl: (restaurant as { cartBackgroundUrl?: string | null }).cartBackgroundUrl ?? null,
+    bottomNavColor: (restaurant as { bottomNavColor?: string | null }).bottomNavColor ?? null,
+    bottomNavIconColor: (restaurant as { bottomNavIconColor?: string | null }).bottomNavIconColor ?? null,
     menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",
     isActive: restaurant.isActive,
     logoUrl: restaurant.logoUrl,
@@ -102,11 +106,11 @@ export default async function RestaurantEditPage({
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <Link href="/admin/restaurants" className="text-white/70 hover:text-white text-sm">
           ← חזרה למסעדות
         </Link>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center flex-wrap">
           <Link
             href={`/admin/restaurants/${id}/map`}
             className="text-sm hover:opacity-80"

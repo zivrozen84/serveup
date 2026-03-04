@@ -24,6 +24,8 @@ interface MenuProps {
     cartColor?: string | null;
     cartTextColor?: string | null;
     cartBackgroundUrl?: string | null;
+    bottomNavColor?: string | null;
+    bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
     textSize?: number | null;
     fontFamily?: string | null;
@@ -69,6 +71,8 @@ interface RestaurantEditWithPreviewProps {
     cartColor?: string | null;
     cartTextColor?: string | null;
     cartBackgroundUrl?: string | null;
+    bottomNavColor?: string | null;
+    bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
@@ -105,6 +109,8 @@ export function RestaurantEditWithPreview({
     cartColor: menuProps.restaurant.cartColor ?? menuProps.restaurant.primaryColor,
     cartTextColor: menuProps.restaurant.cartTextColor ?? "#ffffff",
     cartBackgroundUrl: menuProps.restaurant.cartBackgroundUrl ?? null,
+    bottomNavColor: menuProps.restaurant.bottomNavColor ?? null,
+    bottomNavIconColor: menuProps.restaurant.bottomNavIconColor ?? null,
     frameUrl: previewFrameUrl !== null ? previewFrameUrl : (menuProps.restaurant.frameUrl ?? ""),
     menuDisplayFormat: previewMenuFormat,
     textSize: previewTextSize ?? menuProps.restaurant.textSize ?? 16,

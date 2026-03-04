@@ -38,6 +38,8 @@ interface RestaurantFormProps {
     cartColor?: string | null;
     cartTextColor?: string | null;
     cartBackgroundUrl?: string | null;
+    bottomNavColor?: string | null;
+    bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
@@ -66,6 +68,8 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
   const [cartColor, setCartColor] = useState(initialData?.cartColor ?? initialData?.primaryColor ?? "#c2410c");
   const [cartTextColor, setCartTextColor] = useState(initialData?.cartTextColor ?? "#ffffff");
   const [cartBackgroundUrl, setCartBackgroundUrl] = useState(initialData?.cartBackgroundUrl ?? "");
+  const [bottomNavColor, setBottomNavColor] = useState(initialData?.bottomNavColor ?? initialData?.cartColor ?? "");
+  const [bottomNavIconColor, setBottomNavIconColor] = useState(initialData?.bottomNavIconColor ?? "#ffffff");
   const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "small" | "compact" | "imageRight">(
     (initialData?.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large"
   );
@@ -86,6 +90,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
   const [saving, setSaving] = useState(false);
   const [savingFrame, setSavingFrame] = useState(false);
   const [savingFormat, setSavingFormat] = useState(false);
+  const [activeTogglePressed, setActiveTogglePressed] = useState(false);
 
   useEffect(() => {
     if (onFrameChange) onFrameChange(frameUrl || NO_FRAME);
@@ -237,6 +242,8 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       cartColor: cartColor || null,
       cartTextColor: cartTextColor || null,
       cartBackgroundUrl: cartBackgroundUrl?.trim() || null,
+      bottomNavColor: bottomNavColor?.trim() || null,
+      bottomNavIconColor: bottomNavIconColor?.trim() || null,
       menuDisplayFormat,
       isActive,
       ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
@@ -268,6 +275,23 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           ))}
         </div>
       )}
+      <div className="flex flex-wrap items-center gap-6">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTogglePressed(true);
+            setTimeout(() => {
+              setIsActive((prev) => !prev);
+              setActiveTogglePressed(false);
+            }, 100);
+          }}
+          className={`rounded-xl border-2 border-white/30 px-4 py-2.5 text-sm font-medium text-white transition-transform duration-100 select-none ${
+            activeTogglePressed ? "scale-110" : "scale-100"
+          } ${isActive ? "bg-emerald-600 hover:bg-emerald-500" : "bg-red-600 hover:bg-red-500"}`}
+        >
+          {isActive ? "פעיל" : "לא פעיל"}
+        </button>
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <Label>שם מסעדה</Label>
@@ -381,15 +405,29 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
             <Input value={cartTextColor} onChange={(e) => setCartTextColor(e.target.value)} className="w-20 h-9 text-sm" />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="isActive"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-            className="rounded"
-          />
-          <Label htmlFor="isActive">פעיל</Label>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע עיגולים תחתית (מילוי)</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={bottomNavColor || cartColor}
+              onChange={(e) => setBottomNavColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={bottomNavColor || cartColor} onChange={(e) => setBottomNavColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">צבע אייקון עיגולים תחתית</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={bottomNavIconColor}
+              onChange={(e) => setBottomNavIconColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={bottomNavIconColor} onChange={(e) => setBottomNavIconColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
         </div>
       </div>
       <div>
@@ -448,17 +486,6 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
         {error.menuDisplayFormat?.[0] && <p className="text-sm text-destructive mt-1">{error.menuDisplayFormat[0]}</p>}
       </div>
       <div>
-        <Label>באנר</Label>
-        <Input
-          type="url"
-          value={bannerUrl}
-          onChange={(e) => setBannerUrl(e.target.value)}
-          placeholder="https://..."
-          className="mt-1 w-full min-w-0"
-        />
-        {error.bannerUrl && <p className="text-sm text-destructive mt-1">{error.bannerUrl[0]}</p>}
-      </div>
-      <div>
         <Label>מסגרת</Label>
         <div className="flex gap-2 mt-1 items-center flex-wrap">
           <label className="cursor-pointer">
@@ -509,6 +536,17 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
         {error.frame && <p className="text-sm text-destructive mt-1">{error.frame[0]}</p>}
       </div>
       <div>
+        <Label>באנר</Label>
+        <Input
+          type="url"
+          value={bannerUrl}
+          onChange={(e) => setBannerUrl(e.target.value)}
+          placeholder="https://..."
+          className="mt-1 w-full min-w-0"
+        />
+        {error.bannerUrl && <p className="text-sm text-destructive mt-1">{error.bannerUrl[0]}</p>}
+      </div>
+      <div>
         <Label>רקע תפריט</Label>
         <Input
           type="url"
@@ -520,7 +558,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
         {error.backgroundUrl && <p className="text-sm text-destructive mt-1">{error.backgroundUrl[0]}</p>}
       </div>
       <div>
-        <Label>רקע עגלה (URL תמונה)</Label>
+        <Label>רקע תפריט עגלה</Label>
         <Input
           type="url"
           value={cartBackgroundUrl}

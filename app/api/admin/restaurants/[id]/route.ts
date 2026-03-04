@@ -65,6 +65,8 @@ export async function PUT(
       cartColor: data.cartColor ?? null,
       cartTextColor: data.cartTextColor ?? null,
       cartBackgroundUrl: data.cartBackgroundUrl && data.cartBackgroundUrl !== "" ? data.cartBackgroundUrl : null,
+      bottomNavColor: data.bottomNavColor ?? null,
+      bottomNavIconColor: data.bottomNavIconColor ?? null,
       menuDisplayFormat: data.menuDisplayFormat ?? "large",
         isActive: data.isActive ?? true,
         logoUrl: data.logoUrl ?? null,

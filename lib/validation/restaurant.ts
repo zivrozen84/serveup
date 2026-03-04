@@ -15,6 +15,8 @@ export const restaurantSchema = z.object({
   cartColor: z.string().nullish(),
   cartTextColor: z.string().nullish(),
   cartBackgroundUrl: z.string().nullish().transform((v) => (v === "" ? null : v)),
+  bottomNavColor: z.string().nullish(),
+  bottomNavIconColor: z.string().nullish(),
   isActive: z.boolean().default(true),
   logoUrl: z.string().nullish(),
   bannerUrl: z.string().nullish(),

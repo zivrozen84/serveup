@@ -60,6 +60,8 @@ model Restaurant {
   cartColor          String?  // צבע כפתור עגלה (הוסף לעגלה)
   cartTextColor      String?  // צבע טקסט בעגלה (כפתור הוסף לעגלה)
   cartBackgroundUrl  String?  // רקע אזור עגלה (תמונה via URL)
+  bottomNavColor     String?  // צבע מילוי עיגולים בתחתית (מסגרת שחורה קבועה)
+  bottomNavIconColor String?  // צבע אייקונים בעיגולים בתחתית
   menuDisplayFormat  String   @default("large") // large | compact
   textSize           Int      @default(16)      // גודל טקסט בסיס (px)
   fontFamily         String?  // פונט (למשל Heebo, Assistant)

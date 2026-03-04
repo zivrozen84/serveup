@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { DishExpansionModal, type DishForExpansion } from "./DishExpansionModal";
+import { BottomNavBar } from "./BottomNavBar";
 
 const PHONE_WIDTH = 420;
 
@@ -51,6 +52,8 @@ interface Restaurant {
   cartColor?: string | null;
   cartTextColor?: string | null;
   cartBackgroundUrl?: string | null;
+  bottomNavColor?: string | null;
+  bottomNavIconColor?: string | null;
   menuDisplayFormat?: "large" | "small" | "compact" | "imageRight";
   textSize?: number | null;
   fontFamily?: string | null;
@@ -178,6 +181,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const cartColor = restaurant.cartColor || primaryColor;
   const cartTextColor = restaurant.cartTextColor || "#ffffff";
   const cartBackgroundUrl = restaurant.cartBackgroundUrl || null;
+  const bottomNavFillColor = restaurant.bottomNavColor || cartColor;
+  const bottomNavIconColor = restaurant.bottomNavIconColor || "#ffffff";
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -188,23 +193,22 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const displayFormat = restaurant.menuDisplayFormat ?? "large";
   const baseFontSize = restaurant.textSize ?? 16;
   const fontFamily = restaurant.fontFamily || "inherit";
-  const menuBgStyle = hasBg
-    ? {
-        backgroundImage: `url(${restaurant.backgroundUrl})`,
-        backgroundSize: "100% 100%" as const,
-        backgroundPosition: "center" as const,
-        backgroundRepeat: "no-repeat" as const,
-        backgroundColor: "#1c1917",
-      }
-    : !hasBg
-      ? { backgroundColor: "#1c1917" as const }
-      : undefined;
-
   const contentStyle: React.CSSProperties = {
-    backgroundColor: "#1c1917",
+    backgroundColor: hasBg ? "transparent" : "#1c1917",
     ["--menu-base" as string]: `${baseFontSize}px`,
     fontFamily,
   };
+  /** רקע סטטי למסך הטלפון – מוצג רק באזור הנראה, לא גולל עם המוצרים */
+  const staticBgStyle: React.CSSProperties | null = hasBg
+    ? {
+        backgroundImage: `url(${restaurant.backgroundUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }
+    : null;
+
+  const menuBgStyle = !hasBg ? { backgroundColor: "#1c1917" as const } : undefined;
 
   const content = (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col menu-scalable" dir="rtl" style={contentStyle}>
@@ -237,7 +241,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
 
         <div
           className="flex-1 min-h-0 flex flex-col relative overflow-visible min-h-[60vh]"
-          style={menuBgStyle}
+          style={menuBgStyle ?? { background: "transparent" }}
         >
           <div className="absolute top-4 right-0 left-0 z-10 px-2 overflow-visible">
             <div
@@ -524,8 +528,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
       )}
       {!showPhoneFrame ? (
         <div className="min-h-screen flex justify-center bg-stone-900">
-          <div style={phoneContainerStyle} className="relative overflow-hidden">
-            {content}
+          <div style={{ ...phoneContainerStyle, maxHeight: "min(100vh, 100dvh)" }} className="relative overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 relative flex flex-col">
+              {staticBgStyle && <div className="absolute inset-0 z-0" style={staticBgStyle} aria-hidden />}
+              <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20">{content}</div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
+              <BottomNavBar fillColor={bottomNavFillColor} iconColor={bottomNavIconColor} visible />
+            </div>
             {expansionDish && canExpandDish && (
               <DishExpansionModal
                 open={!!expansionDish}
@@ -574,12 +584,18 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
             className="rounded-[2.5rem] bg-black p-2 shadow-2xl"
             style={phoneContainerStyle}
           >
-            <div className={`${phoneContainerClass} flex flex-col`} style={{ maxHeight: "min(90vh, 700px)" }}>
+            <div className={`${phoneContainerClass} flex flex-col relative`} style={{ maxHeight: "min(90vh, 700px)" }}>
               <div className="h-6 bg-black flex justify-center shrink-0">
                 <div className="w-24 h-4 bg-stone-900 rounded-full" />
               </div>
-              <div className="overflow-y-auto scrollbar-hide flex-1 min-h-0 overflow-x-hidden">
-                {content}
+              <div className="flex-1 min-h-0 relative flex flex-col">
+                {staticBgStyle && <div className="absolute inset-0 z-0" style={staticBgStyle} aria-hidden />}
+                <div className="relative z-10 overflow-y-auto scrollbar-hide flex-1 min-h-0 overflow-x-hidden pb-20">
+                  {content}
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
+                <BottomNavBar fillColor={bottomNavFillColor} iconColor={bottomNavIconColor} visible />
               </div>
               {expansionDish && canExpandDish && (
                 <DishExpansionModal
