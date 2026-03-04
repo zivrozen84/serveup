@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 
 const ROW_HEIGHT = 56; // גובה שורת העיגולים (בלי מסגרת)
 const SIDE_ICONS_RAISE_PX = 18; // הרמת העיגולים בצדדים (משולש)
-const PEEK_VISIBLE_RATIO = 0.15; // במצב מוסתר – 15% גלוי כדי שאפשר יהיה להקפיץ חזרה למעלה
+const PEEK_VISIBLE_RATIO = 0.23; // במצב מוסתר – 23% גלוי כדי שאפשר יהיה להקפיץ חזרה למעלה
 const TOTAL_BAR_HEIGHT = SIDE_ICONS_RAISE_PX + ROW_HEIGHT; // גובה ויזואלי מלא (עיגולי צד מורמים + שורה)
 const PEEK_OFFSET = Math.round(TOTAL_BAR_HEIGHT * (1 - PEEK_VISIBLE_RATIO)); // החלקה למטה עד ש־15% מכל הפס נראה
 const SLIDE_DURATION_MS = 420; // החלקה כמו אצבע – איטית וחלקה
@@ -12,6 +12,7 @@ const DRAG_SNAP_THRESHOLD = 18; // רק בשחרור: החלטה אם לסגור
 const CIRCLE_SIZE = 48;
 const CIRCLE_OPACITY = 0.75;
 const OUTER_RING_PX = 2.5; // מסגרת צבעונית אחרי השחורה
+const CIRCLES_DROP_PX = 4; // הורדה קלה של כל העיגולים (אותה כמות)
 const TOP_PADDING_PX = SIDE_ICONS_RAISE_PX + OUTER_RING_PX + 4; // מקום למעלה כדי שהמסגרת לא תיחתך
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -127,7 +128,7 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
       >
         <div
           style={{
-            transform: `translateY(-${sideCircleRaisePx}px)`,
+            transform: `translateY(${-sideCircleRaisePx + CIRCLES_DROP_PX}px)`,
             transition: isDragging ? "none" : `transform ${SLIDE_DURATION_MS}ms ease-in-out`,
           }}
         >
@@ -185,7 +186,7 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
             border: "3px solid black",
             backgroundColor: hexToRgba(fillColor, CIRCLE_OPACITY),
             boxShadow: `0 0 0 ${OUTER_RING_PX}px ${fillColor}, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
-            transform: isPressed("cart") ? `scale(${circlePressScale})` : undefined,
+            transform: `translateY(${CIRCLES_DROP_PX}px)${isPressed("cart") ? ` scale(${circlePressScale})` : ""}`,
             filter: isPressed("cart") ? "brightness(0.75)" : undefined,
             transition: "transform 0.15s ease-out, filter 0.15s ease-out",
           }}
@@ -218,7 +219,7 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
         </div>
         <div
           style={{
-            transform: `translateY(-${sideCircleRaisePx}px)`,
+            transform: `translateY(${-sideCircleRaisePx + CIRCLES_DROP_PX}px)`,
             transition: isDragging ? "none" : `transform ${SLIDE_DURATION_MS}ms ease-in-out`,
           }}
         >
