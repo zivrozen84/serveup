@@ -31,6 +31,7 @@ export type RestaurantPreviewSnapshot = {
   cartBackgroundUrl?: string | null;
   cartBarOverlayOpacity?: number | null;
   cartBarControlsOpacity?: number | null;
+  expansionBackdropOpacity?: number | null;
   bottomNavColor?: string | null;
   bottomNavIconColor?: string | null;
   menuDisplayFormat?: string;
@@ -64,6 +65,7 @@ interface RestaurantFormProps {
     cartBackgroundUrl?: string | null;
     cartBarOverlayOpacity?: number | null;
     cartBarControlsOpacity?: number | null;
+    expansionBackdropOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
@@ -105,6 +107,7 @@ export function RestaurantForm({
   const [cartBackgroundUrl, setCartBackgroundUrl] = useState(initialData?.cartBackgroundUrl ?? "");
   const [cartBarOverlayOpacity, setCartBarOverlayOpacity] = useState(initialData?.cartBarOverlayOpacity ?? 45);
   const [cartBarControlsOpacity, setCartBarControlsOpacity] = useState(initialData?.cartBarControlsOpacity ?? 100);
+  const [expansionBackdropOpacity, setExpansionBackdropOpacity] = useState(initialData?.expansionBackdropOpacity ?? 70);
   const [bottomNavColor, setBottomNavColor] = useState(initialData?.bottomNavColor ?? initialData?.cartColor ?? "");
   const [bottomNavIconColor, setBottomNavIconColor] = useState(initialData?.bottomNavIconColor ?? "#ffffff");
   const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "small" | "compact" | "imageRight">(
@@ -162,6 +165,7 @@ export function RestaurantForm({
       cartBackgroundUrl: cartBackgroundUrl || null,
       cartBarOverlayOpacity: cartBarOverlayOpacity,
       cartBarControlsOpacity: cartBarControlsOpacity,
+      expansionBackdropOpacity: expansionBackdropOpacity,
       bottomNavColor: bottomNavColor || null,
       bottomNavIconColor: bottomNavIconColor || null,
       menuDisplayFormat,
@@ -181,6 +185,7 @@ export function RestaurantForm({
     cartBackgroundUrl,
     cartBarOverlayOpacity,
     cartBarControlsOpacity,
+    expansionBackdropOpacity,
     bottomNavColor,
     bottomNavIconColor,
     menuDisplayFormat,
@@ -209,6 +214,7 @@ export function RestaurantForm({
       (cartBackgroundUrl || "") !== (initialData.cartBackgroundUrl || "") ||
       cartBarOverlayOpacity !== (initialData.cartBarOverlayOpacity ?? 45) ||
       cartBarControlsOpacity !== (initialData.cartBarControlsOpacity ?? 100) ||
+      expansionBackdropOpacity !== (initialData.expansionBackdropOpacity ?? 70) ||
       (bottomNavColor || "") !== (initialData.bottomNavColor || "") ||
       (bottomNavIconColor || "") !== (initialData.bottomNavIconColor || "") ||
       menuDisplayFormat !== (initialData.menuDisplayFormat ?? "large") ||
@@ -372,6 +378,7 @@ export function RestaurantForm({
       cartBackgroundUrl: cartBackgroundUrl?.trim() || null,
       cartBarOverlayOpacity: cartBarOverlayOpacity,
       cartBarControlsOpacity: cartBarControlsOpacity,
+      expansionBackdropOpacity: expansionBackdropOpacity,
       bottomNavColor: bottomNavColor?.trim() || null,
       bottomNavIconColor: bottomNavIconColor?.trim() || null,
       menuDisplayFormat,
@@ -417,6 +424,7 @@ export function RestaurantForm({
     setCartBackgroundUrl(initialData.cartBackgroundUrl ?? "");
     setCartBarOverlayOpacity(initialData.cartBarOverlayOpacity ?? 45);
     setCartBarControlsOpacity(initialData.cartBarControlsOpacity ?? 100);
+    setExpansionBackdropOpacity(initialData.expansionBackdropOpacity ?? 70);
     setBottomNavColor(initialData.bottomNavColor ?? "");
     setBottomNavIconColor(initialData.bottomNavIconColor ?? "#ffffff");
     setMenuDisplayFormat((initialData.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large");
@@ -625,6 +633,20 @@ export function RestaurantForm({
               className="w-28 h-2 rounded-lg appearance-none cursor-pointer bg-white/20 accent-[#37C27D]"
             />
             <span className="text-sm text-white/80 w-7 tabular-nums shrink-0">{cartBarControlsOpacity}%</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">נראות רקע הרחבה</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={expansionBackdropOpacity}
+              onChange={(e) => setExpansionBackdropOpacity(Number(e.target.value))}
+              className="w-28 h-2 rounded-lg appearance-none cursor-pointer bg-white/20 accent-[#37C27D]"
+            />
+            <span className="text-sm text-white/80 w-7 tabular-nums shrink-0">{expansionBackdropOpacity}%</span>
           </div>
         </div>
       </div>

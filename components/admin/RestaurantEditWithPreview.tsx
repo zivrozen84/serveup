@@ -28,6 +28,7 @@ interface MenuProps {
     cartBackgroundUrl?: string | null;
     cartBarOverlayOpacity?: number | null;
     cartBarControlsOpacity?: number | null;
+    expansionBackdropOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
@@ -78,6 +79,7 @@ interface RestaurantEditWithPreviewProps {
     cartBackgroundUrl?: string | null;
     cartBarOverlayOpacity?: number | null;
     cartBarControlsOpacity?: number | null;
+    expansionBackdropOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
@@ -133,6 +135,7 @@ export function RestaurantEditWithPreview({
     cartBackgroundUrl: menuProps.restaurant.cartBackgroundUrl ?? null,
     cartBarOverlayOpacity: menuProps.restaurant.cartBarOverlayOpacity ?? null,
     cartBarControlsOpacity: menuProps.restaurant.cartBarControlsOpacity ?? null,
+    expansionBackdropOpacity: menuProps.restaurant.expansionBackdropOpacity ?? null,
     bottomNavColor: menuProps.restaurant.bottomNavColor ?? null,
     bottomNavIconColor: menuProps.restaurant.bottomNavIconColor ?? null,
     frameUrl: previewFrameUrl !== null ? previewFrameUrl : (menuProps.restaurant.frameUrl ?? ""),

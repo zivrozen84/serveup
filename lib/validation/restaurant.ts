@@ -18,6 +18,7 @@ export const restaurantSchema = z.object({
   cartBackgroundUrl: z.string().nullish().transform((v) => (v === "" ? null : v)),
   cartBarOverlayOpacity: z.coerce.number().min(0).max(100).optional(),
   cartBarControlsOpacity: z.coerce.number().min(0).max(100).optional(),
+  expansionBackdropOpacity: z.coerce.number().min(0).max(100).optional(),
   bottomNavColor: z.string().nullish(),
   bottomNavIconColor: z.string().nullish(),
   isActive: z.boolean().default(true),

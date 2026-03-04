@@ -55,6 +55,7 @@ interface Restaurant {
   cartBackgroundUrl?: string | null;
   cartBarOverlayOpacity?: number | null;
   cartBarControlsOpacity?: number | null;
+  expansionBackdropOpacity?: number | null;
   bottomNavColor?: string | null;
   bottomNavIconColor?: string | null;
   menuDisplayFormat?: "large" | "small" | "compact" | "imageRight";
@@ -187,6 +188,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const cartBackgroundUrl = restaurant.cartBackgroundUrl || null;
   const cartBarOverlayOpacity = restaurant.cartBarOverlayOpacity ?? 45;
   const cartBarControlsOpacity = restaurant.cartBarControlsOpacity ?? 100;
+  const expansionBackdropOpacity = restaurant.expansionBackdropOpacity ?? 70;
   const bottomNavFillColor = restaurant.bottomNavColor || cartColor;
   const bottomNavIconColor = restaurant.bottomNavIconColor || "#ffffff";
 
@@ -556,6 +558,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartBackgroundUrl={cartBackgroundUrl}
                 cartBarOverlayOpacity={cartBarOverlayOpacity}
                 cartBarControlsOpacity={cartBarControlsOpacity}
+                expansionBackdropOpacity={expansionBackdropOpacity}
                 isAdminMode={isAdminPreview}
                 embedInPhone
                 copiedParamSourceDishId={copiedParamSourceDishId}
@@ -619,6 +622,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartBackgroundUrl={cartBackgroundUrl}
                 cartBarOverlayOpacity={cartBarOverlayOpacity}
                 cartBarControlsOpacity={cartBarControlsOpacity}
+                expansionBackdropOpacity={expansionBackdropOpacity}
                 isAdminMode={isAdminPreview}
                 embedInPhone
                 copiedParamSourceDishId={copiedParamSourceDishId}

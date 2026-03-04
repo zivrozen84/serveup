@@ -68,6 +68,7 @@ export async function PUT(
       cartBackgroundUrl: data.cartBackgroundUrl && data.cartBackgroundUrl !== "" ? data.cartBackgroundUrl : null,
       cartBarOverlayOpacity: data.cartBarOverlayOpacity != null ? Number(data.cartBarOverlayOpacity) : null,
       cartBarControlsOpacity: data.cartBarControlsOpacity != null ? Number(data.cartBarControlsOpacity) : null,
+      expansionBackdropOpacity: data.expansionBackdropOpacity != null ? Number(data.expansionBackdropOpacity) : null,
       bottomNavColor: data.bottomNavColor ?? null,
       bottomNavIconColor: data.bottomNavIconColor ?? null,
       menuDisplayFormat: data.menuDisplayFormat ?? "large",

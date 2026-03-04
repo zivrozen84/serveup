@@ -51,6 +51,7 @@ export default async function RestaurantMenuPage({
           cartBackgroundUrl: (restaurant as { cartBackgroundUrl?: string | null }).cartBackgroundUrl ?? null,
           cartBarOverlayOpacity: (restaurant as { cartBarOverlayOpacity?: number | null }).cartBarOverlayOpacity ?? null,
           cartBarControlsOpacity: (restaurant as { cartBarControlsOpacity?: number | null }).cartBarControlsOpacity ?? null,
+          expansionBackdropOpacity: (restaurant as { expansionBackdropOpacity?: number | null }).expansionBackdropOpacity ?? null,
           bottomNavColor: (restaurant as { bottomNavColor?: string | null }).bottomNavColor ?? null,
           bottomNavIconColor: (restaurant as { bottomNavIconColor?: string | null }).bottomNavIconColor ?? null,
           menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",

@@ -44,6 +44,8 @@ interface DishExpansionModalProps {
   cartBarOverlayOpacity?: number | null;
   /** נראות כפתור הוסף לעגלה ו+/- 0–100 (100=אטום) – המחיר לא מושפע */
   cartBarControlsOpacity?: number | null;
+  /** אטימות השחרת רקע מודאל ההרחבה 0–100 (ברירת מחדל 70) */
+  expansionBackdropOpacity?: number | null;
   isAdminMode: boolean;
   embedInPhone?: boolean;
   copiedParamSourceDishId?: number | null;
@@ -66,6 +68,7 @@ export function DishExpansionModal({
   cartBackgroundUrl,
   cartBarOverlayOpacity,
   cartBarControlsOpacity,
+  expansionBackdropOpacity,
   isAdminMode,
   embedInPhone = false,
   copiedParamSourceDishId,
@@ -282,7 +285,9 @@ export function DishExpansionModal({
         {cartBackgroundUrl && (
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: `rgba(0,0,0,${((cartBarOverlayOpacity ?? 45) / 100)})` }}
+            style={{
+              backgroundColor: `rgba(0,0,0,${(100 - (expansionBackdropOpacity ?? 70)) / 100})`,
+            }}
             aria-hidden
           />
         )}
@@ -611,24 +616,66 @@ export function DishExpansionModal({
     </div>
   );
 
+  const modalBackdropAlpha = 0.7;
   const overlayClass = embedInPhone
-    ? "absolute inset-0 bg-black/70 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-    : "fixed inset-0 bg-black/70 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
+    ? "absolute inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+    : "fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
   const contentWrapperClass = embedInPhone
     ? "absolute inset-0 z-50 flex flex-col modal-slide-panel"
     : "fixed left-0 right-0 top-0 z-50 flex justify-center modal-slide-panel";
 
+  const handlePointerDownOutside = useCallback(
+    (e: Event) => {
+      if (!embedInPhone) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-expansion-overlay]")) return;
+      e.preventDefault();
+    },
+    [embedInPhone]
+  );
+
   const modalInner = (
     <>
-      <Dialog.Overlay className={overlayClass} />
-      <Dialog.Content className={contentWrapperClass}>
+      <Dialog.Overlay
+        data-expansion-overlay
+        className={overlayClass}
+        style={{ backgroundColor: "transparent" }}
+        {...(embedInPhone && { onClick: () => onOpenChange(false) })}
+      />
+      <div
+        aria-hidden
+        data-expansion-overlay
+        className={overlayClass}
+        style={{
+          backgroundColor: `rgba(0,0,0,${modalBackdropAlpha})`,
+          pointerEvents: "none",
+        }}
+      />
+      <Dialog.Content
+        className={contentWrapperClass}
+        onPointerDownOutside={handlePointerDownOutside}
+        onInteractOutside={handlePointerDownOutside}
+      >
         {embedInPhone ? <div className="absolute inset-0 flex flex-col min-h-0 overflow-hidden">{content}</div> : <div className="w-full max-w-[420px] max-h-[85vh] flex flex-col">{content}</div>}
       </Dialog.Content>
     </>
   );
 
+  useEffect(() => {
+    if (!embedInPhone || !open) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevPointerEvents = document.body.style.pointerEvents;
+    document.body.style.overflow = "";
+    document.body.style.pointerEvents = "";
+    document.body.removeAttribute("data-scroll-locked");
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.pointerEvents = prevPointerEvents;
+    };
+  }, [embedInPhone, open]);
+
   return (
-    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange} modal={!embedInPhone}>
       {embedInPhone ? modalInner : <Dialog.Portal>{modalInner}</Dialog.Portal>}
     </Dialog.Root>
   );
