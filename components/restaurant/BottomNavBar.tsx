@@ -143,8 +143,8 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
             border: "3px solid black",
             backgroundColor: hexToRgba(fillColor, CIRCLE_OPACITY),
             boxShadow: `0 0 0 ${OUTER_RING_PX}px ${fillColor}, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
-            transform: isPressed("bell") ? `scale(${circlePressScale})` : undefined,
-            filter: isPressed("bell") ? "brightness(0.75)" : undefined,
+            transform: isPressed("bell") ? `scale(${circlePressScale})` : "scale(1)",
+            filter: isPressed("bell") ? "brightness(0.75)" : "brightness(1)",
             transition: "transform 0.15s ease-out, filter 0.15s ease-out",
           }}
           onPointerDown={(e) => {
@@ -234,8 +234,8 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
             border: "3px solid black",
             backgroundColor: hexToRgba(fillColor, CIRCLE_OPACITY),
             boxShadow: `0 0 0 ${OUTER_RING_PX}px ${fillColor}, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
-            transform: isPressed("chat") ? `scale(${circlePressScale})` : undefined,
-            filter: isPressed("chat") ? "brightness(0.75)" : undefined,
+            transform: isPressed("chat") ? `scale(${circlePressScale})` : "scale(1)",
+            filter: isPressed("chat") ? "brightness(0.75)" : "brightness(1)",
             transition: "transform 0.15s ease-out, filter 0.15s ease-out",
           }}
           onPointerDown={(e) => {

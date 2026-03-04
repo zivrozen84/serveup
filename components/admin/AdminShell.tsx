@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { LayoutDashboard, UtensilsCrossed, Users, Settings } from "lucide-react";
+import { useUnsavedChanges } from "@/lib/UnsavedChangesContext";
 
 const allNav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -14,8 +15,16 @@ const allNav = [
 
 export function AdminShell({ children, userRole }: { children: React.ReactNode; userRole?: string }) {
   const pathname = usePathname();
+  const { hasUnsavedChanges, triggerPulse } = useUnsavedChanges();
   const isSuperAdmin = userRole === "SUPER_ADMIN";
   const nav = allNav.filter((item) => !item.superAdminOnly || isSuperAdmin);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      triggerPulse();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0b10]">
@@ -37,6 +46,7 @@ export function AdminShell({ children, userRole }: { children: React.ReactNode; 
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mb-1 transition-colors ${
                   isActive
                     ? "bg-[#2F7C73] text-white"

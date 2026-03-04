@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const DEFAULT_FRAMES = [
   "/frames/1.png",
@@ -19,9 +19,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+export type RestaurantPreviewSnapshot = {
+  primaryColor?: string;
+  categoryTextColor?: string | null;
+  secondaryColor?: string | null;
+  textColor?: string | null;
+  descriptionColor?: string | null;
+  priceColor?: string | null;
+  cartColor?: string | null;
+  cartTextColor?: string | null;
+  cartBackgroundUrl?: string | null;
+  cartBarOverlayOpacity?: number | null;
+  cartBarControlsOpacity?: number | null;
+  bottomNavColor?: string | null;
+  bottomNavIconColor?: string | null;
+  menuDisplayFormat?: string;
+  frameUrl?: string | null;
+  backgroundUrl?: string | null;
+  bannerUrl?: string | null;
+};
+
 interface RestaurantFormProps {
   onFrameChange?: (url: string) => void;
   onMenuDisplayFormatChange?: (format: "large" | "small" | "compact" | "imageRight") => void;
+  onFormChange?: (data: RestaurantPreviewSnapshot) => void;
+  setHasUnsavedChanges?: (value: boolean) => void;
+  registerPulseTrigger?: (fn: () => void) => void;
   initialData?: {
     id?: number;
     name: string;
@@ -55,8 +78,16 @@ interface RestaurantFormProps {
   };
 }
 
-export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormatChange }: RestaurantFormProps) {
+export function RestaurantForm({
+  initialData,
+  onFrameChange,
+  onMenuDisplayFormatChange,
+  onFormChange,
+  setHasUnsavedChanges,
+  registerPulseTrigger,
+}: RestaurantFormProps) {
   const router = useRouter();
+  const updateButtonRef = useRef<HTMLButtonElement>(null);
   const [name, setName] = useState(initialData?.name ?? "");
   const [slug, setSlug] = useState(initialData?.slug ?? "");
   const [ownerName, setOwnerName] = useState(initialData?.ownerName ?? "");
@@ -117,6 +148,96 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       );
     }
   }, [name, initialData]);
+
+  useEffect(() => {
+    onFormChange?.({
+      primaryColor,
+      categoryTextColor: categoryTextColor || null,
+      secondaryColor: secondaryColor || null,
+      textColor: textColor || null,
+      descriptionColor: descriptionColor || null,
+      priceColor: priceColor || null,
+      cartColor: cartColor || null,
+      cartTextColor: cartTextColor || null,
+      cartBackgroundUrl: cartBackgroundUrl || null,
+      cartBarOverlayOpacity: cartBarOverlayOpacity,
+      cartBarControlsOpacity: cartBarControlsOpacity,
+      bottomNavColor: bottomNavColor || null,
+      bottomNavIconColor: bottomNavIconColor || null,
+      menuDisplayFormat,
+      frameUrl: frameUrl || null,
+      backgroundUrl: backgroundUrl || null,
+      bannerUrl: bannerUrl || null,
+    });
+  }, [
+    primaryColor,
+    categoryTextColor,
+    secondaryColor,
+    textColor,
+    descriptionColor,
+    priceColor,
+    cartColor,
+    cartTextColor,
+    cartBackgroundUrl,
+    cartBarOverlayOpacity,
+    cartBarControlsOpacity,
+    bottomNavColor,
+    bottomNavIconColor,
+    menuDisplayFormat,
+    frameUrl,
+    backgroundUrl,
+    bannerUrl,
+    onFormChange,
+  ]);
+
+  const isDirty =
+    initialData &&
+    (name !== initialData.name ||
+      slug !== initialData.slug ||
+      ownerName !== initialData.ownerName ||
+      ownerEmail !== initialData.ownerEmail ||
+      ownerPhone !== initialData.ownerPhone ||
+      city !== initialData.city ||
+      primaryColor !== initialData.primaryColor ||
+      (categoryTextColor || "") !== (initialData.categoryTextColor || "") ||
+      (secondaryColor || "") !== (initialData.secondaryColor || "") ||
+      (textColor || "") !== (initialData.textColor || "") ||
+      (descriptionColor || "") !== (initialData.descriptionColor || "") ||
+      (priceColor || "") !== (initialData.priceColor || "") ||
+      (cartColor || "") !== (initialData.cartColor || "") ||
+      (cartTextColor || "") !== (initialData.cartTextColor || "") ||
+      (cartBackgroundUrl || "") !== (initialData.cartBackgroundUrl || "") ||
+      cartBarOverlayOpacity !== (initialData.cartBarOverlayOpacity ?? 45) ||
+      cartBarControlsOpacity !== (initialData.cartBarControlsOpacity ?? 100) ||
+      (bottomNavColor || "") !== (initialData.bottomNavColor || "") ||
+      (bottomNavIconColor || "") !== (initialData.bottomNavIconColor || "") ||
+      menuDisplayFormat !== (initialData.menuDisplayFormat ?? "large") ||
+      isActive !== initialData.isActive ||
+      (bannerUrl || "") !== (initialData.bannerUrl || "") ||
+      (frameUrl || "") !== (initialData.frameUrl || "") ||
+      (backgroundUrl || "") !== (initialData.backgroundUrl || ""));
+
+  useEffect(() => {
+    setHasUnsavedChanges?.(!!isDirty);
+  }, [isDirty, setHasUnsavedChanges]);
+
+  const runPulseAnimation = useCallback(() => {
+    const btn = updateButtonRef.current;
+    if (!btn) return;
+    btn.scrollIntoView({ behavior: "smooth", block: "center" });
+    btn.style.transition = "box-shadow 0.3s ease, transform 0.3s ease";
+    btn.style.boxShadow = "0 0 24px 4px rgba(239, 68, 68, 0.9)";
+    btn.style.transform = "scale(1.4)";
+    setTimeout(() => {
+      btn.style.boxShadow = "";
+      btn.style.transform = "";
+    }, 600);
+  }, []);
+
+  useEffect(() => {
+    registerPulseTrigger?.(runPulseAnimation);
+    return () => registerPulseTrigger?.(() => {});
+  }, [registerPulseTrigger, runPulseAnimation]);
 
   async function handleUploadFrame(file: File) {
     setUploading(true);
@@ -266,13 +387,53 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       }),
     });
     setSaving(false);
-    if (!ok) {
+    if (ok) {
+      setHasUnsavedChanges?.(false);
+    } else {
       const err = data?.error;
       const normalized: Record<string, string[]> = err?.fieldErrors
         ? { ...err.fieldErrors, ...(err.formErrors?.length ? { form: err.formErrors } : {}) }
         : { form: [typeof err === "string" ? err : data?.message || "שגיאה"] };
       setError(normalized);
     }
+  }
+
+  function handleCancel() {
+    if (!initialData) return;
+    setName(initialData.name);
+    setSlug(initialData.slug);
+    setOwnerName(initialData.ownerName);
+    setOwnerEmail(initialData.ownerEmail);
+    setOwnerPhone(initialData.ownerPhone);
+    setCity(initialData.city);
+    setPrimaryColor(initialData.primaryColor);
+    setCategoryTextColor(initialData.categoryTextColor ?? "");
+    setSecondaryColor(initialData.secondaryColor ?? "#fbbf24");
+    setTextColor(initialData.textColor ?? "#fef3c7");
+    setDescriptionColor(initialData.descriptionColor ?? "#fde68a");
+    setPriceColor(initialData.priceColor ?? "#fffbeb");
+    setCartColor(initialData.cartColor ?? initialData.primaryColor ?? "#c2410c");
+    setCartTextColor(initialData.cartTextColor ?? "#ffffff");
+    setCartBackgroundUrl(initialData.cartBackgroundUrl ?? "");
+    setCartBarOverlayOpacity(initialData.cartBarOverlayOpacity ?? 45);
+    setCartBarControlsOpacity(initialData.cartBarControlsOpacity ?? 100);
+    setBottomNavColor(initialData.bottomNavColor ?? "");
+    setBottomNavIconColor(initialData.bottomNavIconColor ?? "#ffffff");
+    setMenuDisplayFormat((initialData.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large");
+    setIsActive(initialData.isActive);
+    setBannerUrl(initialData.bannerUrl ?? "");
+    setFrameUrl(initialData.frameUrl ?? NO_FRAME);
+    setBackgroundUrl(initialData.backgroundUrl ?? "");
+    try {
+      const v = initialData.frameVariants;
+      setFrameVariants(v ? JSON.parse(v) : []);
+    } catch {
+      setFrameVariants([]);
+    }
+    onFrameChange?.(initialData.frameUrl ?? NO_FRAME);
+    onMenuDisplayFormatChange?.((initialData.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large");
+    setError({});
+    setHasUnsavedChanges?.(false);
   }
 
   return (
@@ -603,9 +764,27 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           className="mt-1 w-full min-w-0"
         />
       </div>
-      <Button type="submit" disabled={saving} className="text-white hover:opacity-90" style={{ backgroundColor: "#37C27D" }}>
-        {saving ? "שומר..." : initialData?.id ? "עדכן" : "צור מסעדה"}
-      </Button>
+      <div className="flex gap-3 items-center flex-wrap">
+        <Button
+          ref={updateButtonRef}
+          type="submit"
+          disabled={saving}
+          className="text-white hover:text-white active:text-white hover:opacity-90 transition-transform transition-shadow"
+          style={{ backgroundColor: "#37C27D" }}
+        >
+          {saving ? "שומר..." : initialData?.id ? "שמור" : "צור מסעדה"}
+        </Button>
+        {initialData?.id && (
+          <Button
+            type="button"
+            onClick={handleCancel}
+            disabled={saving}
+            className="bg-red-600 text-white hover:bg-red-500 hover:text-white active:text-white active:bg-red-700 border-0"
+          >
+            ביטול
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RestaurantForm } from "./RestaurantForm";
+import { RestaurantForm, type RestaurantPreviewSnapshot } from "./RestaurantForm";
 import { RestaurantMenu } from "@/components/restaurant/RestaurantMenu";
 import { MenuSection } from "./MenuSection";
 import { TextSettingsSection } from "./TextSettingsSection";
+import { useUnsavedChanges } from "@/lib/UnsavedChangesContext";
 
 interface MenuProps {
   restaurant: {
@@ -97,6 +98,10 @@ export function RestaurantEditWithPreview({
   onMenuDisplayFormatChange,
 }: RestaurantEditWithPreviewProps) {
   const router = useRouter();
+  const { setHasUnsavedChanges, registerPulseCallback } = useUnsavedChanges();
+  const pulseTriggerRef = useRef<() => void>(() => {});
+
+  const [liveFormData, setLiveFormData] = useState<RestaurantPreviewSnapshot | null>(null);
   const [previewFrameUrl, setPreviewFrameUrl] = useState<string | null>(null);
   const [previewMenuFormat, setPreviewMenuFormat] = useState<"large" | "small" | "compact" | "imageRight">(
     (menuProps.restaurant.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large"
@@ -104,13 +109,23 @@ export function RestaurantEditWithPreview({
   const [previewTextSize, setPreviewTextSize] = useState<number | null>(null);
   const [previewFontFamily, setPreviewFontFamily] = useState<string | null | undefined>(undefined);
   const [isAdminPreview, setIsAdminPreview] = useState(true);
+
+  useEffect(() => {
+    registerPulseCallback(() => pulseTriggerRef.current?.());
+    return () => {
+      registerPulseCallback(null);
+      setHasUnsavedChanges(false);
+    };
+  }, [registerPulseCallback, setHasUnsavedChanges]);
+
   const handleFrameChange = useCallback((url: string) => setPreviewFrameUrl(url), []);
   const handleMenuFormatChange = useCallback((format: "large" | "small" | "compact" | "imageRight") => {
     setPreviewMenuFormat(format);
     onMenuDisplayFormatChange?.(format);
   }, [onMenuDisplayFormatChange]);
+  const handleFormChange = useCallback((data: RestaurantPreviewSnapshot) => setLiveFormData(data), []);
 
-  const previewRestaurant = {
+  const baseRestaurant = {
     ...menuProps.restaurant,
     categoryTextColor: menuProps.restaurant.categoryTextColor ?? null,
     cartColor: menuProps.restaurant.cartColor ?? menuProps.restaurant.primaryColor,
@@ -125,6 +140,9 @@ export function RestaurantEditWithPreview({
     textSize: previewTextSize ?? menuProps.restaurant.textSize ?? 16,
     fontFamily: previewFontFamily !== undefined ? previewFontFamily : (menuProps.restaurant.fontFamily ?? null),
   };
+  const previewRestaurant = liveFormData
+    ? { ...baseRestaurant, ...liveFormData }
+    : baseRestaurant;
 
   return (
     <div className="flex gap-8 flex-col lg:flex-row">
@@ -133,26 +151,29 @@ export function RestaurantEditWithPreview({
           initialData={formInitialData}
           onFrameChange={handleFrameChange}
           onMenuDisplayFormatChange={handleMenuFormatChange}
+          onFormChange={handleFormChange}
+          setHasUnsavedChanges={setHasUnsavedChanges}
+          registerPulseTrigger={(fn) => { pulseTriggerRef.current = fn; }}
         />
         <div className="mt-12">
           <MenuSection restaurantId={menuProps.restaurant.id} categories={menuProps.categories} />
         </div>
       </div>
-      <div className="w-full max-w-[420px] lg:w-[420px] shrink-0 sticky top-6 flex flex-col items-center">
+      <div className="w-full max-w-[420px] lg:w-[420px] shrink-0 sticky top-6 flex flex-col items-center lg:mr-12">
         <div className="flex flex-col gap-3 mb-4 w-full">
-          <h2 className="text-lg font-semibold text-white">תצוגה מקדימה (Preview)</h2>
+          <h2 className="text-lg font-semibold text-white text-center">תצוגה מקדימה</h2>
           <div className="flex rounded-xl overflow-hidden border border-white/20 bg-white/5 p-1">
             <button
               type="button"
               onClick={() => setIsAdminPreview(true)}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${isAdminPreview ? "bg-emerald-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
+              className={`flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${isAdminPreview ? "bg-emerald-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
             >
               מצב מנהל
             </button>
             <button
               type="button"
               onClick={() => setIsAdminPreview(false)}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${!isAdminPreview ? "bg-sky-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
+              className={`flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${!isAdminPreview ? "bg-sky-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
             >
               מצב לקוח
             </button>
