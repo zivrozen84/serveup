@@ -65,8 +65,10 @@ model Restaurant {
   cartBarOverlayOpacity   Int?     // אטימות שכבת הכהות על רקע עגלה (0–100), ברירת מחדל 45
   cartBarControlsOpacity Int?     // נראות כפתור הוסף לעגלה ו+/- (0–100, 100=אטום)
   expansionBackdropOpacity Int?   // אטימות השחרת רקע מודאל ההרחבה (0–100, ברירת מחדל 70)
+  flyingDiscVisibility    Int?    // נראות דיסקית הוספה לעגלה (0=מוסתר, 100=מוצג)
   bottomNavColor        String?  // צבע מילוי עיגולים בתחתית (מסגרת שחורה קבועה)
   bottomNavIconColor String?  // צבע אייקונים בעיגולים בתחתית
+  summaryCardColor    String?  // צבע כרטיסי פריטים בדף סיכום הזמנה
   menuDisplayFormat  String   @default("large") // large | compact
   textSize           Int      @default(16)      // גודל טקסט בסיס (px)
   fontFamily         String?  // פונט (למשל Heebo, Assistant)

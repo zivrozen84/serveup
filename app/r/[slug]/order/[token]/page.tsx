@@ -85,6 +85,7 @@ export default async function OrderTerminalPage({
             cartBarOverlayOpacity: (restaurant as { cartBarOverlayOpacity?: number | null }).cartBarOverlayOpacity ?? null,
             cartBarControlsOpacity: (restaurant as { cartBarControlsOpacity?: number | null }).cartBarControlsOpacity ?? null,
             expansionBackdropOpacity: (restaurant as { expansionBackdropOpacity?: number | null }).expansionBackdropOpacity ?? null,
+            flyingDiscVisibility: (restaurant as { flyingDiscVisibility?: number | null }).flyingDiscVisibility ?? null,
             bottomNavColor: (restaurant as { bottomNavColor?: string | null }).bottomNavColor ?? null,
             bottomNavIconColor: (restaurant as { bottomNavIconColor?: string | null }).bottomNavIconColor ?? null,
             menuDisplayFormat: restaurant.menuDisplayFormat ?? "large",

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { DishExpansionModal, type DishForExpansion } from "./DishExpansionModal";
 import { BottomNavBar } from "./BottomNavBar";
+import { FlyingFoodDisc } from "./FlyingFoodDisc";
 import { useOrderSession } from "./OrderSessionContext";
 
 const PHONE_WIDTH = 420;
@@ -58,6 +60,7 @@ interface Restaurant {
   cartBarOverlayOpacity?: number | null;
   cartBarControlsOpacity?: number | null;
   expansionBackdropOpacity?: number | null;
+  flyingDiscVisibility?: number | null;
   bottomNavColor?: string | null;
   bottomNavIconColor?: string | null;
   menuDisplayFormat?: "large" | "small" | "compact" | "imageRight";
@@ -97,9 +100,47 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
     },
     [orderSession]
   );
+
+  const onRequestAddToCart = useCallback(
+    (sourceRect: DOMRect) => {
+      return new Promise<void>((resolve) => {
+        const showDisc = (restaurant.flyingDiscVisibility ?? 100) > 0;
+        if (!showDisc) {
+          resolve();
+          return;
+        }
+        const el = cartCircleRef.current;
+        if (!el) {
+          resolve();
+          return;
+        }
+        const cartRect = el.getBoundingClientRect();
+        const from = {
+          x: sourceRect.left + sourceRect.width / 2,
+          y: sourceRect.top + sourceRect.height / 2,
+        };
+        const to = {
+          x: cartRect.left + cartRect.width / 2,
+          y: cartRect.top + cartRect.height / 2,
+        };
+        flyResolveRef.current = resolve;
+        setFlyToCart({ from, to });
+      });
+    },
+    [restaurant.flyingDiscVisibility]
+  );
+
+  const handleFlyComplete = useCallback(() => {
+    flyResolveRef.current?.();
+    flyResolveRef.current = null;
+    setFlyToCart(null);
+  }, []);
   const [pressedDishId, setPressedDishId] = useState<number | null>(null);
   const [copiedParamSourceDishId, setCopiedParamSourceDishId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [flyToCart, setFlyToCart] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
+  const flyResolveRef = useRef<(() => void) | null>(null);
+  const cartCircleRef = useRef<HTMLSpanElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const isJumpingRef = useRef(false);
@@ -543,6 +584,10 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
 
   return (
     <>
+      {flyToCart && typeof document !== "undefined" && createPortal(
+        <FlyingFoodDisc from={flyToCart.from} to={flyToCart.to} onComplete={handleFlyComplete} />,
+        document.body
+      )}
       {toastMessage && (
         <div
           className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg bg-stone-800 text-white text-sm shadow-lg border border-white/20 animate-in fade-in duration-200"
@@ -564,8 +609,9 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 iconColor={bottomNavIconColor}
                 visible
                 cartItemsCount={orderSession?.cartItems.length ?? 0}
-                cartLabel={orderSession ? "סוכם הזמנה" : undefined}
+                cartLabel={orderSession ? "סיכום הזמנה" : undefined}
                 cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
+                cartCircleRef={cartCircleRef}
               />
             </div>
             {expansionDish && canExpandDish && (
@@ -610,17 +656,19 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 canPasteParams={!!copiedParamSourceDishId && copiedParamSourceDishId !== expansionDish.id}
                 onParamsUpdated={onParamsUpdated}
                 onAddToCart={onAddToCart}
+                onRequestAddToCart={orderSession ? onRequestAddToCart : undefined}
               />
             )}
           </div>
         </div>
-      ) : (
+      ) : null}
+      {showPhoneFrame ? (
         <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
           <div
             className="rounded-[2.5rem] bg-black p-2 shadow-2xl"
             style={phoneContainerStyle}
           >
-            <div className={`${phoneContainerClass} flex flex-col relative`} style={{ maxHeight: "min(90vh, 700px)" }}>
+            <div className={`${phoneContainerClass} flex flex-col relative`} style={{ minHeight: "min(90vh, 700px)", maxHeight: "min(90vh, 700px)" }}>
               <div className="h-6 bg-black flex justify-center shrink-0">
                 <div className="w-24 h-4 bg-stone-900 rounded-full" />
               </div>
@@ -636,8 +684,9 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 iconColor={bottomNavIconColor}
                 visible
                 cartItemsCount={orderSession?.cartItems.length ?? 0}
-                cartLabel={orderSession ? "סוכם הזמנה" : undefined}
+                cartLabel={orderSession ? "סיכום הזמנה" : undefined}
                 cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
+                cartCircleRef={cartCircleRef}
               />
               </div>
               {expansionDish && canExpandDish && (
@@ -682,12 +731,13 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   canPasteParams={!!copiedParamSourceDishId && copiedParamSourceDishId !== expansionDish.id}
                   onParamsUpdated={onParamsUpdated}
                   onAddToCart={onAddToCart}
+                  onRequestAddToCart={orderSession ? onRequestAddToCart : undefined}
                 />
               )}
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

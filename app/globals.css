@@ -96,3 +96,19 @@ html:has([data-admin]) body {
 .modal-slide-panel[data-state="closed"] {
   animation: modal-slide-out-top 0.3s ease-out forwards;
 }
+
+/* תג מספר עגלה – אנימציה בהחלפת מספר (סגנון פופ/באנץ') */
+@keyframes cart-badge-pop {
+  0% {
+    transform: scale(1.35);
+  }
+  55% {
+    transform: scale(0.88);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.cart-badge-pop {
+  animation: cart-badge-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

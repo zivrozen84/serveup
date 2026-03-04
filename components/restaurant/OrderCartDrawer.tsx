@@ -43,11 +43,11 @@ export function OrderCartDrawer({
       <div
         className="relative ml-auto w-full max-w-md h-[85%] max-h-[600px] bg-stone-900 rounded-t-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300"
         role="dialog"
-        aria-label="סוכם הזמנה"
+        aria-label="סיכום הזמנה"
       >
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div>
-            <h2 className="text-lg font-bold text-white">סוכם הזמנה</h2>
+            <h2 className="text-lg font-bold text-white">סיכום הזמנה</h2>
             <p className="text-xs text-white/60 mt-0.5">הפריטים שהזמנת</p>
           </div>
           <button

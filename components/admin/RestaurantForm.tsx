@@ -33,8 +33,10 @@ export type RestaurantPreviewSnapshot = {
   cartBarOverlayOpacity?: number | null;
   cartBarControlsOpacity?: number | null;
   expansionBackdropOpacity?: number | null;
+  flyingDiscVisibility?: number | null;
   bottomNavColor?: string | null;
   bottomNavIconColor?: string | null;
+  summaryCardColor?: string | null;
   menuDisplayFormat?: string;
   frameUrl?: string | null;
   backgroundUrl?: string | null;
@@ -70,6 +72,7 @@ interface RestaurantFormProps {
     expansionBackdropOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
+    summaryCardColor?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
@@ -113,8 +116,10 @@ export function RestaurantForm({
   const [cartBarOverlayOpacity, setCartBarOverlayOpacity] = useState(initialData?.cartBarOverlayOpacity ?? 45);
   const [cartBarControlsOpacity, setCartBarControlsOpacity] = useState(initialData?.cartBarControlsOpacity ?? 100);
   const [expansionBackdropOpacity, setExpansionBackdropOpacity] = useState(initialData?.expansionBackdropOpacity ?? 70);
+  const [flyingDiscVisibility, setFlyingDiscVisibility] = useState(initialData?.flyingDiscVisibility ?? 100);
   const [bottomNavColor, setBottomNavColor] = useState(initialData?.bottomNavColor ?? initialData?.cartColor ?? "");
   const [bottomNavIconColor, setBottomNavIconColor] = useState(initialData?.bottomNavIconColor ?? "#ffffff");
+  const [summaryCardColor, setSummaryCardColor] = useState(initialData?.summaryCardColor ?? "#292524");
   const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "small" | "compact" | "imageRight">(
     (initialData?.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large"
   );
@@ -172,8 +177,10 @@ export function RestaurantForm({
       cartBarOverlayOpacity: cartBarOverlayOpacity,
       cartBarControlsOpacity: cartBarControlsOpacity,
       expansionBackdropOpacity: expansionBackdropOpacity,
+      flyingDiscVisibility: flyingDiscVisibility,
       bottomNavColor: bottomNavColor || null,
       bottomNavIconColor: bottomNavIconColor || null,
+      summaryCardColor: summaryCardColor || null,
       menuDisplayFormat,
       frameUrl: frameUrl || null,
       backgroundUrl: backgroundUrl || null,
@@ -193,8 +200,10 @@ export function RestaurantForm({
     cartBarOverlayOpacity,
     cartBarControlsOpacity,
     expansionBackdropOpacity,
+    flyingDiscVisibility,
     bottomNavColor,
     bottomNavIconColor,
+    summaryCardColor,
     menuDisplayFormat,
     frameUrl,
     backgroundUrl,
@@ -223,8 +232,10 @@ export function RestaurantForm({
       cartBarOverlayOpacity !== (initialData.cartBarOverlayOpacity ?? 45) ||
       cartBarControlsOpacity !== (initialData.cartBarControlsOpacity ?? 100) ||
       expansionBackdropOpacity !== (initialData.expansionBackdropOpacity ?? 70) ||
+      flyingDiscVisibility !== (initialData.flyingDiscVisibility ?? 100) ||
       (bottomNavColor || "") !== (initialData.bottomNavColor || "") ||
       (bottomNavIconColor || "") !== (initialData.bottomNavIconColor || "") ||
+      (summaryCardColor || "") !== (initialData.summaryCardColor || "") ||
       menuDisplayFormat !== (initialData.menuDisplayFormat ?? "large") ||
       isActive !== initialData.isActive ||
       (bannerUrl || "") !== (initialData.bannerUrl || "") ||
@@ -388,8 +399,10 @@ export function RestaurantForm({
       cartBarOverlayOpacity: cartBarOverlayOpacity,
       cartBarControlsOpacity: cartBarControlsOpacity,
       expansionBackdropOpacity: expansionBackdropOpacity,
+      flyingDiscVisibility: flyingDiscVisibility,
       bottomNavColor: bottomNavColor?.trim() || null,
       bottomNavIconColor: bottomNavIconColor?.trim() || null,
+      summaryCardColor: summaryCardColor?.trim() || null,
       menuDisplayFormat,
       isActive,
       ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
@@ -435,8 +448,10 @@ export function RestaurantForm({
     setCartBarOverlayOpacity(initialData.cartBarOverlayOpacity ?? 45);
     setCartBarControlsOpacity(initialData.cartBarControlsOpacity ?? 100);
     setExpansionBackdropOpacity(initialData.expansionBackdropOpacity ?? 70);
+    setFlyingDiscVisibility(initialData.flyingDiscVisibility ?? 100);
     setBottomNavColor(initialData.bottomNavColor ?? "");
     setBottomNavIconColor(initialData.bottomNavIconColor ?? "#ffffff");
+    setSummaryCardColor(initialData.summaryCardColor ?? "#292524");
     setMenuDisplayFormat((initialData.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large");
     setIsActive(initialData.isActive);
     setBannerUrl(initialData.bannerUrl ?? "");
@@ -641,6 +656,18 @@ export function RestaurantForm({
             <Input value={bottomNavIconColor} onChange={(e) => setBottomNavIconColor(e.target.value)} className="w-20 h-9 text-sm" />
           </div>
         </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">כרטיסי סיכום</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={summaryCardColor}
+              onChange={(e) => setSummaryCardColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={summaryCardColor} onChange={(e) => setSummaryCardColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
       </div>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
         <div className="flex flex-col gap-1">
@@ -670,6 +697,18 @@ export function RestaurantForm({
             />
             <span className="text-sm text-white/80 w-7 tabular-nums shrink-0">{expansionBackdropOpacity}%</span>
           </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">דיסקית נופלת</Label>
+          <button
+            type="button"
+            onClick={() => setFlyingDiscVisibility((v) => ((v ?? 100) > 0 ? 0 : 100))}
+            className={`w-24 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              (flyingDiscVisibility ?? 100) > 0 ? "bg-[#37C27D] text-white" : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            {(flyingDiscVisibility ?? 100) > 0 ? "פעיל" : "לא פעיל"}
+          </button>
         </div>
       </div>
       <div>

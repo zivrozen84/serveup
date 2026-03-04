@@ -55,6 +55,14 @@ interface DishExpansionModalProps {
   onParamsUpdated?: () => void;
   /** במצב טרמינל – הוספה לעגלה נשמרת בשרת */
   onAddToCart?: (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => void;
+  /** לפני הוספה – אנימציית עף לעגלה; מחזיר Promise שמסתיים כשהאנימציה נגמרת */
+  onRequestAddToCart?: (sourceRect: DOMRect) => Promise<void>;
+  /** מצב עריכה בסוכם – מציג "עדכן" ו"מחק פריט" במקום "הוסף לעגלה" */
+  mode?: "add" | "edit";
+  initialQuantity?: number;
+  initialSelections?: Record<number, number[]>;
+  onUpdate?: (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => void;
+  onRemove?: () => void;
 }
 
 export function DishExpansionModal({
@@ -79,10 +87,17 @@ export function DishExpansionModal({
   canPasteParams,
   onParamsUpdated,
   onAddToCart,
+  onRequestAddToCart,
+  mode = "add",
+  initialQuantity = 1,
+  initialSelections = {},
+  onUpdate,
+  onRemove,
 }: DishExpansionModalProps) {
   const cartColor = cartColorProp || primaryColor;
   const cartTextColor = cartTextColorProp || "#ffffff";
   const controlsOpacity = (cartBarControlsOpacity ?? 100) / 100;
+  const isEditMode = mode === "edit";
   const [paramCategories, setParamCategories] = useState<ParamCategory[]>(dish.paramCategories);
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [quantity, setQuantity] = useState(1);
@@ -95,6 +110,9 @@ export function DishExpansionModal({
   const [editingParamPriceVal, setEditingParamPriceVal] = useState("");
   const categoryRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const dishImageRef = useRef<HTMLDivElement>(null);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const FADE_OUT_MS = 220;
   const [pressedParamKey, setPressedParamKey] = useState<string | null>(null);
   const [priceBump, setPriceBump] = useState(false);
   const prevPriceRef = useRef(0);
@@ -103,9 +121,20 @@ export function DishExpansionModal({
   const [cartBarGlow, setCartBarGlow] = useState(false);
   const [highlightMissingCatId, setHighlightMissingCatId] = useState<number | null>(null);
 
+  // Sync state when modal opens only; do not depend on initialSelections/initialQuantity (unstable refs cause infinite loop)
   useEffect(() => {
-    if (open) setParamCategories(dish.paramCategories);
-  }, [open, dish.paramCategories]);
+    if (!open) return;
+    setIsFadingOut(false);
+    setParamCategories(dish.paramCategories);
+    if (isEditMode) {
+      setQuantity(initialQuantity);
+      setSelections(initialSelections);
+    } else {
+      setQuantity(1);
+      setSelections({});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run only when open toggles to true
+  }, [open]);
 
   const resetState = useCallback(() => {
     setParamCategories(dish.paramCategories);
@@ -265,7 +294,7 @@ export function DishExpansionModal({
 
   const content = (
     <div className={`flex flex-col w-full h-full min-h-0 bg-stone-900 text-white rounded-t-2xl overflow-hidden ${embedInPhone ? "max-h-full" : "max-w-[420px] mx-auto max-h-[85vh] shadow-2xl"}`}>
-      <div className="relative shrink-0 h-[180px] bg-stone-800">
+      <div ref={dishImageRef} className="relative shrink-0 h-[180px] bg-stone-800">
         {dish.imageUrl ? (
           <img src={dish.imageUrl} alt={dish.title} className="w-full h-full object-cover object-center" />
         ) : (
@@ -592,41 +621,119 @@ export function DishExpansionModal({
             >
               ₪{formatPrice(totalPriceCents)}
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (firstMissingRequiredCatId != null) {
-                  setAddButtonShrink(true);
-                  setCartBarGlow(true);
-                  setHighlightMissingCatId(firstMissingRequiredCatId);
-                  const el = categoryRefs.current[firstMissingRequiredCatId];
-                  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                  setTimeout(() => setAddButtonShrink(false), 200);
-                  setTimeout(() => setCartBarGlow(false), 200);
-                }
-                if (firstMissingRequiredCatId == null && onAddToCart) {
-                  const selArray: Array<{ paramCategoryId: number; parameterId: number }> = [];
-                  paramCategories.forEach((cat) => {
-                    (selections[cat.id] ?? []).forEach((paramId) => {
-                      selArray.push({ paramCategoryId: cat.id, parameterId: paramId });
-                    });
-                  });
-                  onAddToCart({
-                    dishId: dish.id,
-                    quantity,
-                    priceCents: totalPriceCents,
-                    selections: selArray.length ? selArray : undefined,
-                  });
-                  onOpenChange(false);
-                }
-              }}
-              className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
-                addButtonShrink ? "scale-[0.85]" : "scale-100"
-              } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
-              style={{ backgroundColor: cartColor, color: cartTextColor, opacity: controlsOpacity }}
-            >
-              הוסף לעגלה
-            </button>
+            {isEditMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRemove?.();
+                    onOpenChange(false);
+                  }}
+                  className="py-3 px-4 rounded-xl font-bold border-2 border-red-500/80 text-red-400 hover:bg-red-500/20 transition-colors"
+                >
+                  מחק פריט
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (firstMissingRequiredCatId != null) {
+                      setAddButtonShrink(true);
+                      setCartBarGlow(true);
+                      setHighlightMissingCatId(firstMissingRequiredCatId);
+                      const el = categoryRefs.current[firstMissingRequiredCatId];
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      setTimeout(() => setAddButtonShrink(false), 200);
+                      setTimeout(() => setCartBarGlow(false), 200);
+                    }
+                    if (firstMissingRequiredCatId == null && onUpdate) {
+                      const selArray: Array<{ paramCategoryId: number; parameterId: number; paramCategoryName?: string; parameterName?: string }> = [];
+                      paramCategories.forEach((cat) => {
+                        (selections[cat.id] ?? []).forEach((paramId) => {
+                          const param = cat.parameters.find((p) => p.id === paramId);
+                          selArray.push({
+                            paramCategoryId: cat.id,
+                            parameterId: paramId,
+                            paramCategoryName: cat.name,
+                            parameterName: param?.name,
+                          });
+                        });
+                      });
+                      onUpdate({
+                        dishId: dish.id,
+                        quantity,
+                        priceCents: totalPriceCents,
+                        selections: selArray.length ? selArray : undefined,
+                      });
+                      onOpenChange(false);
+                    }
+                  }}
+                  className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
+                    addButtonShrink ? "scale-[0.85]" : "scale-100"
+                  } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
+                  style={{ backgroundColor: cartColor, color: cartTextColor, opacity: controlsOpacity }}
+                >
+                  עדכן
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (firstMissingRequiredCatId != null) {
+                    setAddButtonShrink(true);
+                    setCartBarGlow(true);
+                    setHighlightMissingCatId(firstMissingRequiredCatId);
+                    const el = categoryRefs.current[firstMissingRequiredCatId];
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    setTimeout(() => setAddButtonShrink(false), 200);
+                    setTimeout(() => setCartBarGlow(false), 200);
+                  }
+                  if (firstMissingRequiredCatId == null && onAddToCart) {
+                    const sourceRect = dishImageRef.current?.getBoundingClientRect();
+                    const doAdd = () => {
+                      const selArray: Array<{ paramCategoryId: number; parameterId: number; paramCategoryName?: string; parameterName?: string }> = [];
+                      paramCategories.forEach((cat) => {
+                        (selections[cat.id] ?? []).forEach((paramId) => {
+                          const param = cat.parameters.find((p) => p.id === paramId);
+                          selArray.push({
+                            paramCategoryId: cat.id,
+                            parameterId: paramId,
+                            paramCategoryName: cat.name,
+                            parameterName: param?.name,
+                          });
+                        });
+                      });
+                      onAddToCart({
+                        dishId: dish.id,
+                        quantity,
+                        priceCents: totalPriceCents,
+                        selections: selArray.length ? selArray : undefined,
+                      });
+                      onOpenChange(false);
+                    };
+                    if (onRequestAddToCart && sourceRect) {
+                      setIsFadingOut(true);
+                      setTimeout(async () => {
+                        try {
+                          await onRequestAddToCart(sourceRect);
+                        } catch {
+                          /* נפל – מוסיפים בלי אנימציה */
+                        }
+                        doAdd();
+                      }, FADE_OUT_MS);
+                    } else {
+                      doAdd();
+                    }
+                  }
+                }}
+                className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
+                  addButtonShrink ? "scale-[0.85]" : "scale-100"
+                } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
+                style={{ backgroundColor: cartColor, color: cartTextColor, opacity: controlsOpacity }}
+              >
+                הוסף לעגלה
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -651,12 +758,17 @@ export function DishExpansionModal({
     [embedInPhone]
   );
 
+  const fadeStyle: React.CSSProperties = {
+    opacity: isFadingOut ? 0 : 1,
+    transition: `opacity ${FADE_OUT_MS}ms ease-out`,
+  };
+
   const modalInner = (
     <>
       <Dialog.Overlay
         data-expansion-overlay
         className={overlayClass}
-        style={{ backgroundColor: "transparent" }}
+        style={{ backgroundColor: "transparent", ...fadeStyle }}
         {...(embedInPhone && { onClick: () => onOpenChange(false) })}
       />
       <div
@@ -666,12 +778,14 @@ export function DishExpansionModal({
         style={{
           backgroundColor: `rgba(0,0,0,${modalBackdropAlpha})`,
           pointerEvents: "none",
+          ...fadeStyle,
         }}
       />
       <Dialog.Content
         className={contentWrapperClass}
         onPointerDownOutside={handlePointerDownOutside}
         onInteractOutside={handlePointerDownOutside}
+        style={fadeStyle}
       >
         {embedInPhone ? <div className="absolute inset-0 flex flex-col min-h-0 overflow-hidden">{content}</div> : <div className="w-full max-w-[420px] max-h-[85vh] flex flex-col">{content}</div>}
       </Dialog.Content>

@@ -58,23 +58,6 @@ export function ActiveTerminalsList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const extendSession = async (restaurantId: number, sessionId: number) => {
-    try {
-      const res = await fetch(
-        `/api/admin/restaurants/${restaurantId}/sessions/${sessionId}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "extend" }),
-        }
-      );
-      if (res.ok) await fetchAll();
-    } catch {
-      // ignore
-    }
-  };
-
   const closeSession = async (restaurantId: number, sessionId: number) => {
     if (!confirm("לסגור את הטרמינל? העגלה תישאר אך לא יהיה ניתן להוסיף פריטים."))
       return;
@@ -138,13 +121,6 @@ export function ActiveTerminalsList({
                   >
                     פתח לינק
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => extendSession(r.id, s.id)}
-                    className="text-sm px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white"
-                  >
-                    הארך 30 דק׳
-                  </button>
                   <button
                     type="button"
                     onClick={() => closeSession(r.id, s.id)}

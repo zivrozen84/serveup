@@ -59,6 +59,12 @@ function SortableCategoryBlock({
   deleteCategory,
   isDragging,
   renderDishes,
+  isEditingName,
+  editingNameValue,
+  onEditingNameChange,
+  onStartEditName,
+  onSaveName,
+  onCancelEditName,
 }: {
   cat: Category;
   expanded: number | null;
@@ -66,6 +72,12 @@ function SortableCategoryBlock({
   deleteCategory: (id: number) => void;
   isDragging: boolean;
   renderDishes: (catId: number) => React.ReactNode;
+  isEditingName: boolean;
+  editingNameValue: string;
+  onEditingNameChange: (value: string) => void;
+  onStartEditName: () => void;
+  onSaveName: () => void;
+  onCancelEditName: () => void;
 }) {
   const {
     attributes,
@@ -110,14 +122,44 @@ function SortableCategoryBlock({
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-between cursor-pointer text-right min-w-0"
-            onClick={() => setExpanded(expanded === cat.id ? null : cat.id)}
+          <div
+            className="flex-1 flex items-center justify-between min-w-0 cursor-pointer"
+            onClick={() => !isEditingName && setExpanded(expanded === cat.id ? null : cat.id)}
           >
-            <span className="font-semibold">{cat.name}</span>
+            {isEditingName ? (
+              <Input
+                value={editingNameValue}
+                onChange={(e) => onEditingNameChange(e.target.value)}
+                onBlur={onSaveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onSaveName();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    onCancelEditName();
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 min-w-0 font-semibold h-9 bg-white/10 border-white/20 text-right"
+                placeholder="שם קטגוריה"
+                autoFocus
+              />
+            ) : (
+              <span
+                className="font-semibold flex-1 min-w-0 text-right"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartEditName();
+                }}
+                title="לחץ לעריכת השם"
+              >
+                {cat.name}
+              </span>
+            )}
             <span className="text-muted-foreground text-sm shrink-0 mr-2">{cat.dishes.length} מנות</span>
-          </button>
+          </div>
         </div>
       </DroppableSlot>
       {expanded === cat.id && (
@@ -291,6 +333,8 @@ export function MenuSection({
   const [dishSaveError, setDishSaveError] = useState<string | null>(null);
   const [activeDish, setActiveDish] = useState<Dish | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -533,8 +577,40 @@ export function MenuSection({
     if (res.ok) {
       setCategories((p) => p.filter((c) => c.id !== categoryId));
       if (expanded === categoryId) setExpanded(null);
+      if (editingCategoryId === categoryId) setEditingCategoryId(null);
       router.refresh();
     }
+  }
+
+  function startEditCategory(cat: Category) {
+    setEditingCategoryId(cat.id);
+    setEditingCategoryValue(cat.name);
+  }
+
+  async function saveCategoryName() {
+    if (editingCategoryId == null) return;
+    const value = editingCategoryValue.trim();
+    if (!value) {
+      setEditingCategoryId(null);
+      return;
+    }
+    const res = await fetch(`/api/admin/categories/${editingCategoryId}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: value }),
+    });
+    if (res.ok) {
+      setCategories((p) =>
+        p.map((c) => (c.id === editingCategoryId ? { ...c, name: value } : c))
+      );
+      router.refresh();
+    }
+    setEditingCategoryId(null);
+  }
+
+  function cancelEditCategory() {
+    setEditingCategoryId(null);
   }
 
   return (
@@ -570,6 +646,12 @@ export function MenuSection({
                 setExpanded={setExpanded}
                 deleteCategory={deleteCategory}
                 isDragging={activeCategory?.id === cat.id}
+                isEditingName={editingCategoryId === cat.id}
+                editingNameValue={editingCategoryValue}
+                onEditingNameChange={setEditingCategoryValue}
+                onStartEditName={() => startEditCategory(cat)}
+                onSaveName={saveCategoryName}
+                onCancelEditName={cancelEditCategory}
                 renderDishes={(catId) => {
                   const c = categories.find((x) => x.id === catId);
                   if (!c || expanded !== catId) return null;

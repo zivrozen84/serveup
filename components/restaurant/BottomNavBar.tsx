@@ -36,10 +36,12 @@ interface BottomNavBarProps {
   onChatClick?: () => void;
   /** כמות פריטים בעגלה (טרמינל) – מוצגת כתג */
   cartItemsCount?: number;
-  /** תווית לעיגול האמצעי (למשל "סוכם הזמנה") */
+  /** תווית לעיגול האמצעי (למשל "סיכום הזמנה") */
   cartLabel?: string;
-  /** כשמוגדר – העיגול האמצעי הוא לינק לסוכם (תמיד מוביל לדף גם במצב peek) */
+  /** כשמוגדר – העיגול האמצעי הוא לינק לסיכום (תמיד מוביל לדף גם במצב peek) */
   cartHref?: string;
+  /** ref לעיגול העגלה – לאנימציית עף לעגלה */
+  cartCircleRef?: React.RefObject<HTMLSpanElement | null>;
 }
 
 function ChatIcon({ className, color }: { className?: string; color: string }) {
@@ -71,7 +73,7 @@ function BellIcon({ className, color }: { className?: string; color: string }) {
 
 type PressedCircle = "bell" | "cart" | "chat" | null;
 
-export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick, onCartClick, onChatClick, cartItemsCount = 0, cartLabel, cartHref }: BottomNavBarProps) {
+export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick, onCartClick, onChatClick, cartItemsCount = 0, cartLabel, cartHref, cartCircleRef }: BottomNavBarProps) {
   const [offsetY, setOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [pressedCircle, setPressedCircle] = useState<PressedCircle>(null);
@@ -182,12 +184,13 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
           <BellIcon className="w-6 h-6" color={iconColor} />
         </div>
         </div>
+        <span ref={cartCircleRef} className="shrink-0 inline-block">
         {cartHref ? (
           <Link
             href={cartHref}
             className="rounded-full flex items-center justify-center cursor-pointer touch-manipulation shrink-0 no-underline"
             role="button"
-            title={cartLabel || "סוכם הזמנה"}
+            title={cartLabel || "סיכום הזמנה"}
             style={{
               width: CIRCLE_SIZE,
               height: CIRCLE_SIZE,
@@ -204,7 +207,8 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
               <CartIcon className="w-6 h-6" color={iconColor} />
               {cartItemsCount > 0 && (
                 <span
-                  className="absolute -top-2.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5"
+                  key={cartItemsCount}
+                  className="cart-badge-pop absolute -top-2.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5"
                   aria-label={cartLabel ? `${cartItemsCount} פריטים ב${cartLabel}` : `${cartItemsCount} פריטים בעגלה`}
                 >
                   {cartItemsCount > 99 ? "99+" : cartItemsCount}
@@ -258,7 +262,8 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
               <CartIcon className="w-6 h-6" color={iconColor} />
               {cartItemsCount > 0 && (
                 <span
-                  className="absolute -top-2.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5"
+                  key={cartItemsCount}
+                  className="cart-badge-pop absolute -top-2.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5"
                   aria-label={cartLabel ? `${cartItemsCount} פריטים ב${cartLabel}` : `${cartItemsCount} פריטים בעגלה`}
                 >
                   {cartItemsCount > 99 ? "99+" : cartItemsCount}
@@ -267,6 +272,7 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
             </span>
           </div>
         )}
+        </span>
         <div
           style={{
             transform: `translateY(${-sideCircleRaisePx + CIRCLES_DROP_PX}px)`,
