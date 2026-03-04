@@ -9,6 +9,7 @@ export const restaurantSchema = z.object({
   city: z.string().min(1, "עיר חובה"),
   primaryColor: z.string().nullish().transform((v) => v ?? "#c2410c"),
   categoryTextColor: z.string().nullish(),
+  categoryBubbleSecondaryColor: z.string().nullish(),
   secondaryColor: z.string().nullish(),
   textColor: z.string().nullish(),
   descriptionColor: z.string().nullish(),

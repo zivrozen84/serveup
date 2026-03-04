@@ -42,6 +42,7 @@ export default async function RestaurantMenuPage({
           frameUrl: restaurant.frameUrl,
           primaryColor: restaurant.primaryColor,
           categoryTextColor: (restaurant as { categoryTextColor?: string | null }).categoryTextColor ?? null,
+          categoryBubbleSecondaryColor: (restaurant as { categoryBubbleSecondaryColor?: string | null }).categoryBubbleSecondaryColor ?? null,
           secondaryColor: restaurant.secondaryColor,
           textColor: restaurant.textColor,
           descriptionColor: restaurant.descriptionColor,

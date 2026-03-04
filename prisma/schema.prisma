@@ -54,6 +54,7 @@ model Restaurant {
   frameVariants String?
   primaryColor       String   @default("#c2410c")
   categoryTextColor  String?  // צבע טקסט קטגוריות (שמות קטגוריות בתפריט)
+  categoryBubbleSecondaryColor String?  // צבע בועות קטגוריות ללא פוקוס (משני)
   secondaryColor     String?  // כותרות קטגוריות
   textColor          String?  // טקסט מנות
   descriptionColor   String?  // תיאור

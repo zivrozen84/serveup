@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 export type RestaurantPreviewSnapshot = {
   primaryColor?: string;
   categoryTextColor?: string | null;
+  categoryBubbleSecondaryColor?: string | null;
   secondaryColor?: string | null;
   textColor?: string | null;
   descriptionColor?: string | null;
@@ -56,6 +57,7 @@ interface RestaurantFormProps {
     city: string;
     primaryColor: string;
     categoryTextColor?: string | null;
+    categoryBubbleSecondaryColor?: string | null;
     secondaryColor?: string | null;
     textColor?: string | null;
     descriptionColor?: string | null;
@@ -98,6 +100,9 @@ export function RestaurantForm({
   const [city, setCity] = useState(initialData?.city ?? "");
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor ?? "#c2410c");
   const [categoryTextColor, setCategoryTextColor] = useState(initialData?.categoryTextColor ?? "");
+  const [categoryBubbleSecondaryColor, setCategoryBubbleSecondaryColor] = useState(
+    initialData?.categoryBubbleSecondaryColor ?? "#5c4033"
+  );
   const [secondaryColor, setSecondaryColor] = useState(initialData?.secondaryColor ?? "#fbbf24");
   const [textColor, setTextColor] = useState(initialData?.textColor ?? "#fef3c7");
   const [descriptionColor, setDescriptionColor] = useState(initialData?.descriptionColor ?? "#fde68a");
@@ -156,6 +161,7 @@ export function RestaurantForm({
     onFormChange?.({
       primaryColor,
       categoryTextColor: categoryTextColor || null,
+      categoryBubbleSecondaryColor: categoryBubbleSecondaryColor || null,
       secondaryColor: secondaryColor || null,
       textColor: textColor || null,
       descriptionColor: descriptionColor || null,
@@ -176,6 +182,7 @@ export function RestaurantForm({
   }, [
     primaryColor,
     categoryTextColor,
+    categoryBubbleSecondaryColor,
     secondaryColor,
     textColor,
     descriptionColor,
@@ -205,6 +212,7 @@ export function RestaurantForm({
       city !== initialData.city ||
       primaryColor !== initialData.primaryColor ||
       (categoryTextColor || "") !== (initialData.categoryTextColor || "") ||
+      (categoryBubbleSecondaryColor || "") !== (initialData.categoryBubbleSecondaryColor || "") ||
       (secondaryColor || "") !== (initialData.secondaryColor || "") ||
       (textColor || "") !== (initialData.textColor || "") ||
       (descriptionColor || "") !== (initialData.descriptionColor || "") ||
@@ -369,6 +377,7 @@ export function RestaurantForm({
       city,
       primaryColor,
       categoryTextColor: categoryTextColor?.trim() || null,
+      categoryBubbleSecondaryColor: categoryBubbleSecondaryColor?.trim() || null,
       secondaryColor: secondaryColor || null,
       textColor: textColor || null,
       descriptionColor: descriptionColor || null,
@@ -415,6 +424,7 @@ export function RestaurantForm({
     setCity(initialData.city);
     setPrimaryColor(initialData.primaryColor);
     setCategoryTextColor(initialData.categoryTextColor ?? "");
+    setCategoryBubbleSecondaryColor(initialData.categoryBubbleSecondaryColor ?? "#5c4033");
     setSecondaryColor(initialData.secondaryColor ?? "#fbbf24");
     setTextColor(initialData.textColor ?? "#fef3c7");
     setDescriptionColor(initialData.descriptionColor ?? "#fde68a");
@@ -500,7 +510,7 @@ export function RestaurantForm({
       </div>
       <div className="flex flex-wrap gap-6 items-end">
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">קטגוריות בועות</Label>
+          <Label className="text-xs">קטגוריית בועות ראשי</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -509,6 +519,18 @@ export function RestaurantForm({
               className="h-9 w-10 rounded border cursor-pointer border-white/20"
             />
             <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">קטגוריית בועות משני</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={categoryBubbleSecondaryColor}
+              onChange={(e) => setCategoryBubbleSecondaryColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={categoryBubbleSecondaryColor} onChange={(e) => setCategoryBubbleSecondaryColor(e.target.value)} className="w-20 h-9 text-sm" placeholder="#5c4033" />
           </div>
         </div>
         <div className="flex flex-col gap-1">

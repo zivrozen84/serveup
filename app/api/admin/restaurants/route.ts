@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       city: data.city,
       primaryColor: data.primaryColor ?? "#c2410c",
       categoryTextColor: data.categoryTextColor ?? null,
+      categoryBubbleSecondaryColor: data.categoryBubbleSecondaryColor ?? null,
       secondaryColor: data.secondaryColor ?? null,
       textColor: data.textColor ?? null,
       descriptionColor: data.descriptionColor ?? null,

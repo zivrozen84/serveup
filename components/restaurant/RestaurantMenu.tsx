@@ -46,6 +46,7 @@ interface Restaurant {
   frameUrl: string | null;
   primaryColor: string;
   categoryTextColor?: string | null;
+  categoryBubbleSecondaryColor?: string | null;
   secondaryColor?: string | null;
   textColor?: string | null;
   descriptionColor?: string | null;
@@ -179,6 +180,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
 
   const primaryColor = restaurant.primaryColor || "#c2410c";
   const categoryTextColor = restaurant.categoryTextColor || restaurant.secondaryColor || "#fbbf24";
+  const categoryBubbleSecondaryColor = restaurant.categoryBubbleSecondaryColor || "rgba(0,0,0,0.5)";
   const secondaryColor = restaurant.secondaryColor || "#fbbf24";
   const textColor = restaurant.textColor || "#fef3c7";
   const descriptionColor = restaurant.descriptionColor || "#fde68a";
@@ -268,7 +270,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   onClick={() => handleCategoryClick(cat.id)}
                   className="shrink-0 px-5 py-2.5 rounded-full menu-text-base font-bold transition-colors shadow-lg whitespace-nowrap"
                   style={{
-                    backgroundColor: activeCat === cat.id ? primaryColor : "rgba(0,0,0,0.5)",
+                    backgroundColor: activeCat === cat.id ? primaryColor : categoryBubbleSecondaryColor,
                     color: categoryTextColor,
                     border: "1px solid rgba(255,255,255,0.3)",
                     backdropFilter: "blur(8px)",

@@ -322,6 +322,7 @@ export function MenuSection({
 
       const res = await fetch(`/api/admin/restaurants/${restaurantId}/categories/reorder`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categoryIds: newOrder.map((c) => c.id) }),
       });
@@ -381,6 +382,7 @@ export function MenuSection({
 
     fetch(`/api/admin/dishes/${dishId}/move`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ targetCategoryId, targetIndex }),
     }).then(() => router.refresh());
@@ -406,6 +408,7 @@ export function MenuSection({
     if (!newCatName.trim()) return;
     const res = await fetch(`/api/admin/restaurants/${restaurantId}/categories`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newCatName.trim(), sortOrder: categories.length }),
     });
@@ -421,6 +424,7 @@ export function MenuSection({
     if (!newDish.title.trim()) return;
     const res = await fetch(`/api/admin/categories/${categoryId}/dishes`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: newDish.title.trim(),
@@ -479,6 +483,7 @@ export function MenuSection({
     try {
       const res = await fetch(`/api/admin/dishes/${editingDish.id}`, {
         method: "PUT",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -512,7 +517,7 @@ export function MenuSection({
   }
 
   async function deleteDish(dishId: number) {
-    const res = await fetch(`/api/admin/dishes/${dishId}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/dishes/${dishId}`, { method: "DELETE", credentials: "include" });
     if (res.ok) {
       setCategories((p) =>
         p.map((c) => ({ ...c, dishes: c.dishes.filter((d) => d.id !== dishId) }))
@@ -524,7 +529,7 @@ export function MenuSection({
 
   async function deleteCategory(categoryId: number) {
     if (!confirm("להסיר את הקטגוריה? כל המנות שבה יימחקו.")) return;
-    const res = await fetch(`/api/admin/categories/${categoryId}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/categories/${categoryId}`, { method: "DELETE", credentials: "include" });
     if (res.ok) {
       setCategories((p) => p.filter((c) => c.id !== categoryId));
       if (expanded === categoryId) setExpanded(null);
