@@ -45,6 +45,7 @@ interface Restaurant {
   backgroundUrl: string | null;
   frameUrl: string | null;
   primaryColor: string;
+  categoryTextColor?: string | null;
   secondaryColor?: string | null;
   textColor?: string | null;
   descriptionColor?: string | null;
@@ -52,6 +53,8 @@ interface Restaurant {
   cartColor?: string | null;
   cartTextColor?: string | null;
   cartBackgroundUrl?: string | null;
+  cartBarOverlayOpacity?: number | null;
+  cartBarControlsOpacity?: number | null;
   bottomNavColor?: string | null;
   bottomNavIconColor?: string | null;
   menuDisplayFormat?: "large" | "small" | "compact" | "imageRight";
@@ -174,6 +177,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   }, []);
 
   const primaryColor = restaurant.primaryColor || "#c2410c";
+  const categoryTextColor = restaurant.categoryTextColor || restaurant.secondaryColor || "#fbbf24";
   const secondaryColor = restaurant.secondaryColor || "#fbbf24";
   const textColor = restaurant.textColor || "#fef3c7";
   const descriptionColor = restaurant.descriptionColor || "#fde68a";
@@ -181,6 +185,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const cartColor = restaurant.cartColor || primaryColor;
   const cartTextColor = restaurant.cartTextColor || "#ffffff";
   const cartBackgroundUrl = restaurant.cartBackgroundUrl || null;
+  const cartBarOverlayOpacity = restaurant.cartBarOverlayOpacity ?? 45;
+  const cartBarControlsOpacity = restaurant.cartBarControlsOpacity ?? 100;
   const bottomNavFillColor = restaurant.bottomNavColor || cartColor;
   const bottomNavIconColor = restaurant.bottomNavIconColor || "#ffffff";
 
@@ -261,7 +267,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   className="shrink-0 px-5 py-2.5 rounded-full menu-text-base font-bold transition-colors shadow-lg whitespace-nowrap"
                   style={{
                     backgroundColor: activeCat === cat.id ? primaryColor : "rgba(0,0,0,0.5)",
-                    color: "white",
+                    color: categoryTextColor,
                     border: "1px solid rgba(255,255,255,0.3)",
                     backdropFilter: "blur(8px)",
                     boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
@@ -548,6 +554,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartColor={cartColor}
                 cartTextColor={cartTextColor}
                 cartBackgroundUrl={cartBackgroundUrl}
+                cartBarOverlayOpacity={cartBarOverlayOpacity}
+                cartBarControlsOpacity={cartBarControlsOpacity}
                 isAdminMode={isAdminPreview}
                 embedInPhone
                 copiedParamSourceDishId={copiedParamSourceDishId}
@@ -609,6 +617,8 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartColor={cartColor}
                 cartTextColor={cartTextColor}
                 cartBackgroundUrl={cartBackgroundUrl}
+                cartBarOverlayOpacity={cartBarOverlayOpacity}
+                cartBarControlsOpacity={cartBarControlsOpacity}
                 isAdminMode={isAdminPreview}
                 embedInPhone
                 copiedParamSourceDishId={copiedParamSourceDishId}

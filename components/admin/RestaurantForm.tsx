@@ -31,6 +31,7 @@ interface RestaurantFormProps {
     ownerPhone: string;
     city: string;
     primaryColor: string;
+    categoryTextColor?: string | null;
     secondaryColor?: string | null;
     textColor?: string | null;
     descriptionColor?: string | null;
@@ -38,6 +39,8 @@ interface RestaurantFormProps {
     cartColor?: string | null;
     cartTextColor?: string | null;
     cartBackgroundUrl?: string | null;
+    cartBarOverlayOpacity?: number | null;
+    cartBarControlsOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
@@ -61,6 +64,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
   const [ownerPhone, setOwnerPhone] = useState(initialData?.ownerPhone ?? "");
   const [city, setCity] = useState(initialData?.city ?? "");
   const [primaryColor, setPrimaryColor] = useState(initialData?.primaryColor ?? "#c2410c");
+  const [categoryTextColor, setCategoryTextColor] = useState(initialData?.categoryTextColor ?? "");
   const [secondaryColor, setSecondaryColor] = useState(initialData?.secondaryColor ?? "#fbbf24");
   const [textColor, setTextColor] = useState(initialData?.textColor ?? "#fef3c7");
   const [descriptionColor, setDescriptionColor] = useState(initialData?.descriptionColor ?? "#fde68a");
@@ -68,6 +72,8 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
   const [cartColor, setCartColor] = useState(initialData?.cartColor ?? initialData?.primaryColor ?? "#c2410c");
   const [cartTextColor, setCartTextColor] = useState(initialData?.cartTextColor ?? "#ffffff");
   const [cartBackgroundUrl, setCartBackgroundUrl] = useState(initialData?.cartBackgroundUrl ?? "");
+  const [cartBarOverlayOpacity, setCartBarOverlayOpacity] = useState(initialData?.cartBarOverlayOpacity ?? 45);
+  const [cartBarControlsOpacity, setCartBarControlsOpacity] = useState(initialData?.cartBarControlsOpacity ?? 100);
   const [bottomNavColor, setBottomNavColor] = useState(initialData?.bottomNavColor ?? initialData?.cartColor ?? "");
   const [bottomNavIconColor, setBottomNavIconColor] = useState(initialData?.bottomNavIconColor ?? "#ffffff");
   const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "small" | "compact" | "imageRight">(
@@ -235,6 +241,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       ownerPhone,
       city,
       primaryColor,
+      categoryTextColor: categoryTextColor?.trim() || null,
       secondaryColor: secondaryColor || null,
       textColor: textColor || null,
       descriptionColor: descriptionColor || null,
@@ -242,6 +249,8 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       cartColor: cartColor || null,
       cartTextColor: cartTextColor || null,
       cartBackgroundUrl: cartBackgroundUrl?.trim() || null,
+      cartBarOverlayOpacity: cartBarOverlayOpacity,
+      cartBarControlsOpacity: cartBarControlsOpacity,
       bottomNavColor: bottomNavColor?.trim() || null,
       bottomNavIconColor: bottomNavIconColor?.trim() || null,
       menuDisplayFormat,
@@ -322,7 +331,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
       </div>
       <div className="flex flex-wrap gap-6 items-end">
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע ראשי</Label>
+          <Label className="text-xs">קטגוריות בועות</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -334,7 +343,19 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע משני (כותרות)</Label>
+          <Label className="text-xs">טקסט בועות</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={categoryTextColor || "#fbbf24"}
+              onChange={(e) => setCategoryTextColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={categoryTextColor} onChange={(e) => setCategoryTextColor(e.target.value)} className="w-20 h-9 text-sm" placeholder="#fbbf24" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">קטגוריית מנה</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -346,7 +367,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע טקסט</Label>
+          <Label className="text-xs">כותרת מנה</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -358,7 +379,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע תיאור</Label>
+          <Label className="text-xs">תיאור</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -370,7 +391,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע מחיר</Label>
+          <Label className="text-xs">מחיר</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -382,7 +403,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע עגלה (הוסף לעגלה)</Label>
+          <Label className="text-xs">הוסף עגלה</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -394,7 +415,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע טקסט בעגלה</Label>
+          <Label className="text-xs">טקסט עגלה</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -406,7 +427,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע עיגולים תחתית (מילוי)</Label>
+          <Label className="text-xs">עיגולים</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -418,7 +439,7 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">צבע אייקון עיגולים תחתית</Label>
+          <Label className="text-xs">אייקון עיגולים</Label>
           <div className="flex gap-1 items-center">
             <input
               type="color"
@@ -427,6 +448,22 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
               className="h-9 w-10 rounded border cursor-pointer border-white/20"
             />
             <Input value={bottomNavIconColor} onChange={(e) => setBottomNavIconColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">נראות הוסף עגלה</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={cartBarControlsOpacity}
+              onChange={(e) => setCartBarControlsOpacity(Number(e.target.value))}
+              className="w-28 h-2 rounded-lg appearance-none cursor-pointer bg-white/20 accent-[#37C27D]"
+            />
+            <span className="text-sm text-white/80 w-7 tabular-nums shrink-0">{cartBarControlsOpacity}%</span>
           </div>
         </div>
       </div>
@@ -532,7 +569,6 @@ export function RestaurantForm({ initialData, onFrameChange, onMenuDisplayFormat
             ))}
           </div>
         </div>
-        <p className="text-xs text-white/50 mt-1">לחץ על תמונה לבחירה – נשמר אוטומטית</p>
         {error.frame && <p className="text-sm text-destructive mt-1">{error.frame[0]}</p>}
       </div>
       <div>

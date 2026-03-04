@@ -40,6 +40,10 @@ interface DishExpansionModalProps {
   cartTextColor?: string;
   /** רקע אזור עגלה (URL תמונה) */
   cartBackgroundUrl?: string | null;
+  /** אטימות שכבת הכהות על רקע עגלה 0–100 (ברירת מחדל 45) */
+  cartBarOverlayOpacity?: number | null;
+  /** נראות כפתור הוסף לעגלה ו+/- 0–100 (100=אטום) – המחיר לא מושפע */
+  cartBarControlsOpacity?: number | null;
   isAdminMode: boolean;
   embedInPhone?: boolean;
   copiedParamSourceDishId?: number | null;
@@ -60,6 +64,8 @@ export function DishExpansionModal({
   cartColor: cartColorProp,
   cartTextColor: cartTextColorProp,
   cartBackgroundUrl,
+  cartBarOverlayOpacity,
+  cartBarControlsOpacity,
   isAdminMode,
   embedInPhone = false,
   copiedParamSourceDishId,
@@ -70,6 +76,7 @@ export function DishExpansionModal({
 }: DishExpansionModalProps) {
   const cartColor = cartColorProp || primaryColor;
   const cartTextColor = cartTextColorProp || "#ffffff";
+  const controlsOpacity = (cartBarControlsOpacity ?? 100) / 100;
   const [paramCategories, setParamCategories] = useState<ParamCategory[]>(dish.paramCategories);
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [quantity, setQuantity] = useState(1);
@@ -265,10 +272,25 @@ export function DishExpansionModal({
         </Dialog.Close>
       </div>
       <div
-        ref={scrollAreaRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4"
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehaviorY: "contain" }}
+        className="flex-1 min-h-0 flex flex-col min-w-0 bg-cover bg-center bg-no-repeat relative"
+        style={
+          cartBackgroundUrl
+            ? { backgroundImage: `url(${cartBackgroundUrl})` }
+            : undefined
+        }
       >
+        {cartBackgroundUrl && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${((cartBarOverlayOpacity ?? 45) / 100)})` }}
+            aria-hidden
+          />
+        )}
+        <div
+          ref={scrollAreaRef}
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4"
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehaviorY: "contain" }}
+        >
         <div>
           <h2 className="text-xl font-bold" style={{ color: textColor }}>{dish.title}</h2>
           {dish.description && (
@@ -518,18 +540,16 @@ export function DishExpansionModal({
           </>
         )}
 
-      </div>
-      <div
-        className="shrink-0 p-4 pt-2 border-t border-white/10 bg-cover bg-center relative"
-          style={
-            cartBackgroundUrl
-              ? { backgroundImage: `url(${cartBackgroundUrl})` }
-              : { backgroundColor: "#1c1917" }
-          }
+        </div>
+        <div
+          className="relative shrink-0 p-4 pt-2 border-t border-white/10"
+          style={!cartBackgroundUrl ? { backgroundColor: "#1c1917" } : undefined}
         >
-          {cartBackgroundUrl && <div className="absolute inset-0 bg-black/45" aria-hidden />}
           <div className="relative flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white/15">
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white/15"
+              style={{ opacity: controlsOpacity }}
+            >
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -581,12 +601,13 @@ export function DishExpansionModal({
               className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
                 addButtonShrink ? "scale-[0.85]" : "scale-100"
               } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
-              style={{ backgroundColor: cartColor, color: cartTextColor }}
+              style={{ backgroundColor: cartColor, color: cartTextColor, opacity: controlsOpacity }}
             >
               הוסף לעגלה
             </button>
           </div>
         </div>
+      </div>
     </div>
   );
 

@@ -17,6 +17,7 @@ interface MenuProps {
     backgroundUrl: string | null;
     frameUrl: string | null;
     primaryColor: string;
+    categoryTextColor?: string | null;
     secondaryColor?: string | null;
     textColor?: string | null;
     descriptionColor?: string | null;
@@ -24,6 +25,8 @@ interface MenuProps {
     cartColor?: string | null;
     cartTextColor?: string | null;
     cartBackgroundUrl?: string | null;
+    cartBarOverlayOpacity?: number | null;
+    cartBarControlsOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
@@ -64,6 +67,7 @@ interface RestaurantEditWithPreviewProps {
     ownerPhone: string;
     city: string;
     primaryColor: string;
+    categoryTextColor?: string | null;
     secondaryColor?: string | null;
     textColor?: string | null;
     descriptionColor?: string | null;
@@ -71,6 +75,8 @@ interface RestaurantEditWithPreviewProps {
     cartColor?: string | null;
     cartTextColor?: string | null;
     cartBackgroundUrl?: string | null;
+    cartBarOverlayOpacity?: number | null;
+    cartBarControlsOpacity?: number | null;
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     menuDisplayFormat?: string;
@@ -106,9 +112,12 @@ export function RestaurantEditWithPreview({
 
   const previewRestaurant = {
     ...menuProps.restaurant,
+    categoryTextColor: menuProps.restaurant.categoryTextColor ?? null,
     cartColor: menuProps.restaurant.cartColor ?? menuProps.restaurant.primaryColor,
     cartTextColor: menuProps.restaurant.cartTextColor ?? "#ffffff",
     cartBackgroundUrl: menuProps.restaurant.cartBackgroundUrl ?? null,
+    cartBarOverlayOpacity: menuProps.restaurant.cartBarOverlayOpacity ?? null,
+    cartBarControlsOpacity: menuProps.restaurant.cartBarControlsOpacity ?? null,
     bottomNavColor: menuProps.restaurant.bottomNavColor ?? null,
     bottomNavIconColor: menuProps.restaurant.bottomNavIconColor ?? null,
     frameUrl: previewFrameUrl !== null ? previewFrameUrl : (menuProps.restaurant.frameUrl ?? ""),
