@@ -539,7 +539,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
               {staticBgStyle && <div className="absolute inset-0 z-0" style={staticBgStyle} aria-hidden />}
               <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20">{content}</div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
+            <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
               <BottomNavBar fillColor={bottomNavFillColor} iconColor={bottomNavIconColor} visible />
             </div>
             {expansionDish && canExpandDish && (
@@ -602,7 +602,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   {content}
                 </div>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
+              <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
                 <BottomNavBar fillColor={bottomNavFillColor} iconColor={bottomNavIconColor} visible />
               </div>
               {expansionDish && canExpandDish && (
