@@ -9,20 +9,24 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
 
-  const restaurants = await prisma.restaurant.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    include: { _count: { select: { tables: true } } },
-  });
+  const [restaurants, activeTerminalsCount] = await Promise.all([
+    prisma.restaurant.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: { _count: { select: { tables: true } } },
+    }),
+    prisma.orderSession.count({
+      where: { status: "active", expiresAt: { gt: new Date() } },
+    }),
+  ]);
 
   const activeRestaurants = restaurants.filter((r) => r.isActive).length;
-  const totalTables = restaurants.reduce((s, r) => s + r._count.tables, 0);
 
   const cards = [
     { title: "מסעדות פעילות", value: activeRestaurants, accent: "#37C27D", badge: "red", bars: [2, 4, 6, 4, 7, 5, 3] },
     { title: "הזמנות היום", value: "0", accent: "#4A90E2", badge: null, bars: [1, 3, 2, 5, 2, 4, 6] },
     { title: "הכנסות היום", value: "₪0", accent: "#F5A623", badge: null, bars: [5, 3, 7, 4, 6, 2, 5] },
-    { title: "שולחנות פעילים", value: totalTables, accent: "#D0021B", badge: "green", bars: [3, 6, 4, 2, 5, 7, 4] },
+    { title: "טרמינלים פעילים", value: activeTerminalsCount, accent: "#D0021B", badge: "green", bars: [3, 6, 4, 2, 5, 7, 4] },
   ];
 
   return (
