@@ -75,8 +75,9 @@ model Restaurant {
   createdAt     DateTime @default(now())
   whatsappPhoneNumberId String?  // מזהה המספר ב-WhatsApp Cloud API – לקישור בוט למסעדה
 
-  tables     Table[]
-  categories Category[]
+  tables        Table[]
+  categories    Category[]
+  orderSessions OrderSession[]
 
   @@map("restaurants")
 }
@@ -105,8 +106,9 @@ model Dish {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 
-  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category    Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   paramCategories DishParameterCategory[]
+  cartItems   CartItem[]
 
   @@map("dishes")
 }
@@ -150,7 +152,41 @@ model Table {
   shape        String?  // "circle" | "rectangle"
   createdAt    DateTime @default(now())
 
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderSessions OrderSession[]
 
   @@map("tables")
+}
+
+// סשן הזמנה (טרמינל) – לקוח שפתח לינק, עגלה נשמרת עד תום זמן או סיום הזמנה
+model OrderSession {
+  id           Int       @id @default(autoincrement())
+  restaurantId Int
+  tableId      Int?      // אופציונלי – שולחן מקושר (מהמפה)
+  token        String    @unique // מזהה ב-URL – פתיחת הלינק עם הטוקן מחזירה את אותו סשן
+  label        String?   // תווית להצגה (למשל "שולחן 3" או "טרמינל 1")
+  status       String    @default("active") // active | closed | expired
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime  // תום תוקף (למשל 90 דקות מהפתיחה)
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table      Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  cartItems  CartItem[]
+
+  @@map("order_sessions")
+}
+
+// פריט בעגלה של סשן
+model CartItem {
+  id             Int    @id @default(autoincrement())
+  orderSessionId Int
+  dishId         Int
+  quantity       Int    @default(1)
+  priceCents     Int    // מחיר נשמר בזמן ההוספה
+  selections     Json?  // בחירות פרמטרים: [{ paramCategoryId, parameterId }] או מערך דומה
+
+  orderSession OrderSession @relation(fields: [orderSessionId], references: [id], onDelete: Cascade)
+  dish         Dish         @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@map("cart_items")
 }

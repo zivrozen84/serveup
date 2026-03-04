@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 
 const ROW_HEIGHT = 56; // גובה שורת העיגולים (בלי מסגרת)
 const SIDE_ICONS_RAISE_PX = 18; // הרמת העיגולים בצדדים (משולש)
@@ -33,6 +34,12 @@ interface BottomNavBarProps {
   onBellClick?: () => void;
   onCartClick?: () => void;
   onChatClick?: () => void;
+  /** כמות פריטים בעגלה (טרמינל) – מוצגת כתג */
+  cartItemsCount?: number;
+  /** תווית לעיגול האמצעי (למשל "סוכם הזמנה") */
+  cartLabel?: string;
+  /** כשמוגדר – העיגול האמצעי הוא לינק לסוכם (תמיד מוביל לדף גם במצב peek) */
+  cartHref?: string;
 }
 
 function ChatIcon({ className, color }: { className?: string; color: string }) {
@@ -64,7 +71,7 @@ function BellIcon({ className, color }: { className?: string; color: string }) {
 
 type PressedCircle = "bell" | "cart" | "chat" | null;
 
-export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick, onCartClick, onChatClick }: BottomNavBarProps) {
+export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick, onCartClick, onChatClick, cartItemsCount = 0, cartLabel, cartHref }: BottomNavBarProps) {
   const [offsetY, setOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [pressedCircle, setPressedCircle] = useState<PressedCircle>(null);
@@ -175,48 +182,91 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
           <BellIcon className="w-6 h-6" color={iconColor} />
         </div>
         </div>
-        <div
-          className="rounded-full flex items-center justify-center cursor-pointer touch-manipulation"
-          role="button"
-          tabIndex={0}
-          title="עגלה"
-          style={{
-            width: CIRCLE_SIZE,
-            height: CIRCLE_SIZE,
-            border: "3px solid black",
-            backgroundColor: hexToRgba(fillColor, CIRCLE_OPACITY),
-            boxShadow: `0 0 0 ${OUTER_RING_PX}px ${fillColor}, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
-            transform: `translateY(${CIRCLES_DROP_PX}px)${isPressed("cart") ? ` scale(${circlePressScale})` : ""}`,
-            filter: isPressed("cart") ? "brightness(0.75)" : undefined,
-            transition: "transform 0.15s ease-out, filter 0.15s ease-out",
-          }}
-          onPointerDown={(e) => {
-            if (isPeek) {
-              e.stopPropagation();
-              touchStartedInPeekRef.current = true;
-              requestAnimationFrame(() => setOffsetY(0));
-              return;
-            }
-            setPressedCircle("cart");
-          }}
-          onPointerUp={(e) => {
-            (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-            if (touchStartedInPeekRef.current) {
-              touchStartedInPeekRef.current = false;
+        {cartHref ? (
+          <Link
+            href={cartHref}
+            className="rounded-full flex items-center justify-center cursor-pointer touch-manipulation shrink-0 no-underline"
+            role="button"
+            title={cartLabel || "סוכם הזמנה"}
+            style={{
+              width: CIRCLE_SIZE,
+              height: CIRCLE_SIZE,
+              border: "3px solid black",
+              backgroundColor: hexToRgba(fillColor, CIRCLE_OPACITY),
+              boxShadow: `0 0 0 ${OUTER_RING_PX}px ${fillColor}, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
+              transform: `translateY(${CIRCLES_DROP_PX}px)`,
+              transition: "transform 0.15s ease-out, filter 0.15s ease-out",
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="relative inline-block pointer-events-none">
+              <CartIcon className="w-6 h-6" color={iconColor} />
+              {cartItemsCount > 0 && (
+                <span
+                  className="absolute -top-2.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5"
+                  aria-label={cartLabel ? `${cartItemsCount} פריטים ב${cartLabel}` : `${cartItemsCount} פריטים בעגלה`}
+                >
+                  {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                </span>
+              )}
+            </span>
+          </Link>
+        ) : (
+          <div
+            className="rounded-full flex items-center justify-center cursor-pointer touch-manipulation"
+            role="button"
+            tabIndex={0}
+            title={cartLabel || "עגלה"}
+            style={{
+              width: CIRCLE_SIZE,
+              height: CIRCLE_SIZE,
+              border: "3px solid black",
+              backgroundColor: hexToRgba(fillColor, CIRCLE_OPACITY),
+              boxShadow: `0 0 0 ${OUTER_RING_PX}px ${fillColor}, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
+              transform: `translateY(${CIRCLES_DROP_PX}px)${isPressed("cart") ? ` scale(${circlePressScale})` : ""}`,
+              filter: isPressed("cart") ? "brightness(0.75)" : undefined,
+              transition: "transform 0.15s ease-out, filter 0.15s ease-out",
+            }}
+            onPointerDown={(e) => {
+              if (isPeek) {
+                e.stopPropagation();
+                touchStartedInPeekRef.current = true;
+                requestAnimationFrame(() => setOffsetY(0));
+                if (onCartClick) onCartClick();
+                return;
+              }
+              setPressedCircle("cart");
+            }}
+            onPointerUp={(e) => {
+              (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+              if (touchStartedInPeekRef.current) {
+                touchStartedInPeekRef.current = false;
+                setPressedCircle(null);
+                return;
+              }
               setPressedCircle(null);
-              return;
-            }
-            setPressedCircle(null);
-            onCartClick?.();
-          }}
-          onPointerLeave={(e) => {
-            (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-            if (touchStartedInPeekRef.current) touchStartedInPeekRef.current = false;
-            setPressedCircle(null);
-          }}
-        >
-          <CartIcon className="w-6 h-6" color={iconColor} />
-        </div>
+              onCartClick?.();
+            }}
+            onPointerLeave={(e) => {
+              (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+              if (touchStartedInPeekRef.current) touchStartedInPeekRef.current = false;
+              setPressedCircle(null);
+            }}
+          >
+            <span className="relative inline-block">
+              <CartIcon className="w-6 h-6" color={iconColor} />
+              {cartItemsCount > 0 && (
+                <span
+                  className="absolute -top-2.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5"
+                  aria-label={cartLabel ? `${cartItemsCount} פריטים ב${cartLabel}` : `${cartItemsCount} פריטים בעגלה`}
+                >
+                  {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                </span>
+              )}
+            </span>
+          </div>
+        )}
         <div
           style={{
             transform: `translateY(${-sideCircleRaisePx + CIRCLES_DROP_PX}px)`,

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LayoutDashboard, UtensilsCrossed, Users, Settings } from "lucide-react";
+import { LayoutDashboard, UtensilsCrossed, Users, Settings, Monitor } from "lucide-react";
 import { useUnsavedChanges } from "@/lib/UnsavedChangesContext";
 
 const allNav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/restaurants", label: "מסעדות", icon: UtensilsCrossed },
+  { href: "/admin/terminals", label: "טרמינלים פעילים", icon: Monitor },
   { href: "/admin/users", label: "משתמשים", icon: Users, superAdminOnly: true },
   { href: "/admin/settings", label: "הגדרות", icon: Settings },
 ];

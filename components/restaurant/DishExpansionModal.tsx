@@ -53,6 +53,8 @@ interface DishExpansionModalProps {
   onPasteParams?: () => Promise<void>;
   canPasteParams?: boolean;
   onParamsUpdated?: () => void;
+  /** במצב טרמינל – הוספה לעגלה נשמרת בשרת */
+  onAddToCart?: (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => void;
 }
 
 export function DishExpansionModal({
@@ -76,6 +78,7 @@ export function DishExpansionModal({
   onPasteParams,
   canPasteParams,
   onParamsUpdated,
+  onAddToCart,
 }: DishExpansionModalProps) {
   const cartColor = cartColorProp || primaryColor;
   const cartTextColor = cartTextColorProp || "#ffffff";
@@ -601,7 +604,21 @@ export function DishExpansionModal({
                   setTimeout(() => setAddButtonShrink(false), 200);
                   setTimeout(() => setCartBarGlow(false), 200);
                 }
-                // when valid (firstMissingRequiredCatId == null), add-to-cart would go here if needed
+                if (firstMissingRequiredCatId == null && onAddToCart) {
+                  const selArray: Array<{ paramCategoryId: number; parameterId: number }> = [];
+                  paramCategories.forEach((cat) => {
+                    (selections[cat.id] ?? []).forEach((paramId) => {
+                      selArray.push({ paramCategoryId: cat.id, parameterId: paramId });
+                    });
+                  });
+                  onAddToCart({
+                    dishId: dish.id,
+                    quantity,
+                    priceCents: totalPriceCents,
+                    selections: selArray.length ? selArray : undefined,
+                  });
+                  onOpenChange(false);
+                }
               }}
               className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
                 addButtonShrink ? "scale-[0.85]" : "scale-100"

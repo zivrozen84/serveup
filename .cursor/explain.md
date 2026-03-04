@@ -22,6 +22,7 @@
 | `restaurants/new/page.tsx` | יצירת מסעדה חדשה – RestaurantForm בלי תצוגה מקדימה. |
 | `restaurants/[id]/page.tsx` | עריכת מסעדה – RestaurantEditWithPreview (טופס + תצוגה מקדימה + MenuSection), קישורים ל"מפת מסעדה" ו"צפה בתפריט". |
 | `restaurants/[id]/map/page.tsx` | מפת שולחנות – RestaurantMapEditor. |
+| `terminals/page.tsx` | טרמינלים פעילים – רשימת סשנים פתוחים לכל מסעדה, הארכה/סגירה. |
 
 ### `/app/r/[slug]` – תפריט ציבורי
 | קובץ | מטרה |
@@ -46,6 +47,12 @@
 | `admin/dishes/[id]/copy-parameters/route.ts` | העתקת פרמטרים ממנה למנה (מנהל). |
 | `admin/upload/route.ts` | העלאת תמונות. |
 | `admin/restaurants/[id]/frame/route.ts` | PATCH מסגרת (frameUrl, frameVariants) אם קיים. |
+| `admin/restaurants/[id]/sessions/route.ts` | GET – רשימת סשני הזמנה (טרמינלים) של המסעדה (active=true ברירת מחדל). |
+| `admin/restaurants/[id]/sessions/[sessionId]/route.ts` | PATCH – הארכת תוקף (action: extend) או סגירת טרמינל (action: close). |
+| `r/[slug]/session/route.ts` | POST – יצירת סשן טרמינל חדש (tableToken/tableId/label אופציונלי). |
+| `r/[slug]/session/[token]/route.ts` | GET – פרטי סשן + פריטי עגלה. |
+| `r/[slug]/session/[token]/cart/route.ts` | GET, POST – קבלת עגלה, הוספת פריט. |
+| `r/[slug]/session/[token]/cart/[itemId]/route.ts` | PATCH (כמות), DELETE – עדכון/הסרת פריט. |
 
 ### `/components/admin` – קומפוננטות אדמין
 | קובץ | מטרה |
@@ -175,3 +182,4 @@ npx prisma generate
 - **תצוגה מקדימה live:** צבעים ונראות מתעדכנים בתצוגה בזמן אמת; שמירה רק בלחיצת שמור. כפתור ביטול.
 - **נראות רקע הרחבה:** סקאלה בטופס שולטת בהשחרה על רקע תפריט עגלה בהרחבה (100% = גלוי, 0% = מקסימום השחרה).
 - **הרחבה בתצוגה מקדימה:** הפאנל והתצוגה לא חופפים – אפשר לגלול בפאנל ולבצע פעולות גם כשההרחבה פתוחה; לחיצה בפאנל לא סוגרת את ההרחבה.
+- **טרמינל הזמנה (עגלה נשמרת):** לינק `/r/[slug]/order` יוצר סשן חדש (90 דק׳) ומפנה ל־`/r/[slug]/order/[token]`. בדף הטרמינל – אותו תפריט + "הוסף לעגלה" שומר ל־API, עגלה בפאנל צד (כמות על האייקון), הארכה/סגירה מאדמין. אדמין: "טרמינלים פעילים" בסרגל – רשימת סשנים פעילים, הארך 30 דק׳, סגור.

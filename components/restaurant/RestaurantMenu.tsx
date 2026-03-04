@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { DishExpansionModal, type DishForExpansion } from "./DishExpansionModal";
 import { BottomNavBar } from "./BottomNavBar";
+import { useOrderSession } from "./OrderSessionContext";
 
 const PHONE_WIDTH = 420;
 
@@ -77,11 +78,25 @@ interface RestaurantMenuProps {
   otherDishesForCopy?: Array<{ id: number; title: string }>;
   /** רענון אחרי שינוי פרמטרים (מנהל) */
   onParamsUpdated?: () => void;
+  /** טוקן סשן טרמינל – עגלה נשמרת בשרת */
+  orderSessionToken?: string;
+  /** slug מסעדה – לשימוש עם orderSessionToken */
+  orderSlug?: string;
 }
 
-export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayout = false, isAdminPreview = false, otherDishesForCopy, onParamsUpdated }: RestaurantMenuProps) {
+export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayout = false, isAdminPreview = false, otherDishesForCopy, onParamsUpdated, orderSessionToken, orderSlug }: RestaurantMenuProps) {
+  const orderSession = useOrderSession();
   const [activeCat, setActiveCat] = useState(categories[0]?.id ?? null);
   const [expansionDish, setExpansionDish] = useState<DishForExpansion | null>(null);
+  useEffect(() => {
+    if (orderSession) orderSession.refreshCart();
+  }, [orderSession]);
+  const onAddToCart = useCallback(
+    (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => {
+      orderSession?.addToCart(payload.dishId, payload.quantity, payload.priceCents, payload.selections);
+    },
+    [orderSession]
+  );
   const [pressedDishId, setPressedDishId] = useState<number | null>(null);
   const [copiedParamSourceDishId, setCopiedParamSourceDishId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -544,7 +559,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
               <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20">{content}</div>
             </div>
             <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
-              <BottomNavBar fillColor={bottomNavFillColor} iconColor={bottomNavIconColor} visible />
+              <BottomNavBar
+                fillColor={bottomNavFillColor}
+                iconColor={bottomNavIconColor}
+                visible
+                cartItemsCount={orderSession?.cartItems.length ?? 0}
+                cartLabel={orderSession ? "סוכם הזמנה" : undefined}
+                cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
+              />
             </div>
             {expansionDish && canExpandDish && (
               <DishExpansionModal
@@ -587,6 +609,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 }}
                 canPasteParams={!!copiedParamSourceDishId && copiedParamSourceDishId !== expansionDish.id}
                 onParamsUpdated={onParamsUpdated}
+                onAddToCart={onAddToCart}
               />
             )}
           </div>
@@ -608,7 +631,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 </div>
               </div>
               <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
-                <BottomNavBar fillColor={bottomNavFillColor} iconColor={bottomNavIconColor} visible />
+                <BottomNavBar
+                fillColor={bottomNavFillColor}
+                iconColor={bottomNavIconColor}
+                visible
+                cartItemsCount={orderSession?.cartItems.length ?? 0}
+                cartLabel={orderSession ? "סוכם הזמנה" : undefined}
+                cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
+              />
               </div>
               {expansionDish && canExpandDish && (
                 <DishExpansionModal
@@ -651,6 +681,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   }}
                   canPasteParams={!!copiedParamSourceDishId && copiedParamSourceDishId !== expansionDish.id}
                   onParamsUpdated={onParamsUpdated}
+                  onAddToCart={onAddToCart}
                 />
               )}
             </div>

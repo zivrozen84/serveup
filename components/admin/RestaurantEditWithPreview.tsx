@@ -111,6 +111,8 @@ export function RestaurantEditWithPreview({
   const [previewTextSize, setPreviewTextSize] = useState<number | null>(null);
   const [previewFontFamily, setPreviewFontFamily] = useState<string | null | undefined>(undefined);
   const [isAdminPreview, setIsAdminPreview] = useState(true);
+  const [clientOrderLink, setClientOrderLink] = useState<string | null>(null);
+  const [creatingLink, setCreatingLink] = useState(false);
 
   useEffect(() => {
     registerPulseCallback(() => pulseTriggerRef.current?.());
@@ -126,6 +128,32 @@ export function RestaurantEditWithPreview({
     onMenuDisplayFormatChange?.(format);
   }, [onMenuDisplayFormatChange]);
   const handleFormChange = useCallback((data: RestaurantPreviewSnapshot) => setLiveFormData(data), []);
+
+  const handleCreateClientLink = useCallback(async () => {
+    const slug = menuProps.restaurant.slug;
+    setCreatingLink(true);
+    setClientOrderLink(null);
+    try {
+      const res = await fetch(`/api/r/${slug}/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setClientOrderLink(null);
+        setCreatingLink(false);
+        return;
+      }
+      const url = typeof window !== "undefined"
+        ? `${window.location.origin}/r/${slug}/order/${data.token}`
+        : "";
+      setClientOrderLink(url);
+      if (url) window.open(url, "_blank");
+    } finally {
+      setCreatingLink(false);
+    }
+  }, [menuProps.restaurant.slug]);
 
   const baseRestaurant = {
     ...menuProps.restaurant,
@@ -165,21 +193,59 @@ export function RestaurantEditWithPreview({
       <div className="w-full max-w-[420px] lg:w-[420px] shrink-0 sticky top-6 flex flex-col items-center lg:mr-12">
         <div className="flex flex-col gap-3 mb-4 w-full">
           <h2 className="text-lg font-semibold text-white text-center">תצוגה מקדימה</h2>
-          <div className="flex rounded-xl overflow-hidden border border-white/20 bg-white/5 p-1">
+          <div className="flex flex-col gap-2">
+            <div className="flex rounded-xl overflow-hidden border border-white/20 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => setIsAdminPreview(true)}
+                className={`flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${isAdminPreview ? "bg-emerald-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
+              >
+                מצב מנהל
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAdminPreview(false)}
+                className={`flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${!isAdminPreview ? "bg-sky-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
+              >
+                מצב לקוח
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => setIsAdminPreview(true)}
-              className={`flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${isAdminPreview ? "bg-emerald-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
+              onClick={handleCreateClientLink}
+              disabled={creatingLink}
+              className="w-full py-2.5 px-4 rounded-xl border border-sky-500/50 bg-sky-500/20 text-sky-300 text-sm font-medium hover:bg-sky-500/30 disabled:opacity-50 transition-colors"
             >
-              מצב מנהל
+              {creatingLink ? "יוצר לינק..." : "צור לינק לקוח"}
             </button>
-            <button
-              type="button"
-              onClick={() => setIsAdminPreview(false)}
-              className={`flex-1 flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${!isAdminPreview ? "bg-sky-600 text-white shadow" : "text-white/70 hover:bg-white/10"}`}
-            >
-              מצב לקוח
-            </button>
+            {clientOrderLink && (
+              <div className="rounded-lg bg-white/5 border border-white/10 p-3 text-sm">
+                <p className="text-white/70 mb-1">לינק נפתח בחלון חדש. יופיע גם ב״טרמינלים פעילים״.</p>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    readOnly
+                    value={clientOrderLink}
+                    className="flex-1 min-w-0 rounded bg-black/30 px-2 py-1.5 text-white/90 text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(clientOrderLink)}
+                    className="shrink-0 py-1.5 px-3 rounded bg-white/10 hover:bg-white/20 text-white text-xs"
+                  >
+                    העתק
+                  </button>
+                  <a
+                    href={clientOrderLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 py-1.5 px-3 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs"
+                  >
+                    פתח שוב
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <RestaurantMenu
