@@ -22,6 +22,8 @@
 | `restaurants/new/page.tsx` | יצירת מסעדה חדשה – RestaurantForm בלי תצוגה מקדימה. |
 | `restaurants/[id]/page.tsx` | עריכת מסעדה – RestaurantEditWithPreview (טופס + תצוגה מקדימה + MenuSection), קישורים ל"מפת מסעדה" ו"צפה בתפריט". |
 | `restaurants/[id]/map/page.tsx` | מפת שולחנות – RestaurantMapEditor. |
+| `restaurants/[id]/map/view/page.tsx` | צפה במפה – תצוגת מפה בלבד (בלי עריכה), לחיצה על שולחן → צור לינק לשולחן. |
+| `restaurants/[id]/reception/page.tsx` | **מסך קבלה** – לשונית קבלה: מפה (לחיצה על שולחן לסינון), בונים לפי זמן, שעון אדום מעל 10 דק׳, הודיע מוכן, אופציה "אל תודיע מוכן ותמחק אחרי X דקות". |
 | `terminals/page.tsx` | טרמינלים פעילים – רשימת סשנים פתוחים לכל מסעדה, הארכה/סגירה. |
 
 ### `/app/r/[slug]` – תפריט ציבורי וטרמינל הזמנה
@@ -52,6 +54,9 @@
 | `admin/restaurants/[id]/frame/route.ts` | PATCH מסגרת (frameUrl, frameVariants) אם קיים. |
 | `admin/restaurants/[id]/sessions/route.ts` | GET – רשימת סשני הזמנה (טרמינלים) של המסעדה (active=true ברירת מחדל). |
 | `admin/restaurants/[id]/sessions/[sessionId]/route.ts` | PATCH – הארכת תוקף (action: extend) או סגירת טרמינל (action: close). |
+| `admin/restaurants/[id]/reception/orders/route.ts` | GET – רשימת הזמנות למסך קבלה; מחק אוטומטי אחרי X דקות אם receptionDontNotifyReady. |
+| `admin/restaurants/[id]/reception/orders/[submissionId]/route.ts` | PATCH – סימון הזמנה כ־ready (הודיע מוכן). |
+| `admin/restaurants/[id]/reception/settings/route.ts` | GET, PATCH – הגדרות קבלה (receptionDontNotifyReady, receptionAutoDeleteMinutes). |
 | `r/[slug]/session/route.ts` | POST – יצירת סשן טרמינל חדש (tableToken/tableId/label אופציונלי). |
 | `r/[slug]/session/[token]/route.ts` | GET – פרטי סשן + פריטי עגלה. |
 | `r/[slug]/session/[token]/cart/route.ts` | GET, POST – קבלת עגלה, הוספת פריט. |
@@ -69,6 +74,7 @@
 | `TablesSection.tsx` | ניהול שולחנות. |
 | `TextSettingsSection.tsx` | גודל טקסט ופונט – סליידר ומבחר פונט, מעדכן תצוגה מקדימה (previewTextSize, previewFontFamily). |
 | `RestaurantMapEditor.tsx` | עריכת מפת שולחנות. |
+| `ReceptionMapView.tsx` | מפת שולחנות תצוגה בלבד למסך קבלה – לחיצה על שולחן לסינון הזמנות, תג עם כמות. |
 | `RestaurantEditChoiceDialog.tsx` | דיאלוג בחירה אם קיים. |
 
 ### `/components/restaurant` – תפריט ציבורי ותצוגה מקדימה

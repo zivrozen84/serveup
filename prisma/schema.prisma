@@ -81,6 +81,9 @@ model Restaurant {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   whatsappPhoneNumberId String?  // מזהה המספר ב-WhatsApp Cloud API – לקישור בוט למסעדה
+  receptionDontNotifyReady Boolean @default(false)  // מסך קבלה: אל תודיע מוכן, תמחק אחרי X דקות
+  receptionAutoDeleteMinutes Int?  // מסך קבלה: מחק הזמנות אוטומטית אחרי דקות (למשל 30) כש־receptionDontNotifyReady
+  receptionAlertAfterMinutes Int?  // מסך קבלה: התראת זמן – שולחן וכרטיסיה אדומים + צליל אחרי X דקות
 
   tables        Table[]
   categories    Category[]
@@ -208,6 +211,7 @@ model OrderSubmission {
   orderSessionId Int
   guestId        String
   submittedAt    DateTime @default(now())
+  status         String   @default("pending") // pending | ready – למסך הקבלה (הודיע מוכן)
 
   orderSession OrderSession        @relation(fields: [orderSessionId], references: [id], onDelete: Cascade)
   items        OrderSubmissionItem[]

@@ -130,6 +130,13 @@ export default async function RestaurantEditPage({
         </Link>
         <div className="flex gap-4 items-center flex-wrap">
           <Link
+            href={`/admin/restaurants/${id}/reception`}
+            className="text-sm hover:opacity-80"
+            style={{ color: "#E8A838" }}
+          >
+            מסך קבלה
+          </Link>
+          <Link
             href={`/admin/restaurants/${id}/map`}
             className="text-sm hover:opacity-80"
             style={{ color: "#4A90E2" }}

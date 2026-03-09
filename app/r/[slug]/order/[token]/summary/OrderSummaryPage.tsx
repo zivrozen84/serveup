@@ -214,7 +214,10 @@ export function OrderSummaryPage({
               />
             )}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="font-medium text-white text-sm">{item.dish.title}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-white text-sm flex-1 min-w-0 text-right">{item.dish.title}</p>
+                <span className="text-white/90 text-sm font-medium shrink-0">{item.quantity}</span>
+              </div>
               {selectionLines.length > 0 ? (
                 <div className="text-xs mt-0.5 text-white/70 space-y-0.5">
                   {selectionLines.map((line, i) => (
@@ -223,7 +226,7 @@ export function OrderSummaryPage({
                 </div>
               ) : null}
               <p className="text-xs mt-0.5" style={{ color: priceColor }}>
-                ₪{formatPrice(item.priceCents)} × {item.quantity}
+                ₪{formatPrice(item.priceCents)}
               </p>
             </div>
           </button>
@@ -237,7 +240,10 @@ export function OrderSummaryPage({
               />
             )}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="font-medium text-white text-sm">{item.dish.title}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-white text-sm flex-1 min-w-0 text-right">{item.dish.title}</p>
+                <span className="text-white/90 text-sm font-medium shrink-0">{item.quantity}</span>
+              </div>
               {selectionLines.length > 0 ? (
                 <div className="text-xs mt-0.5 text-white/70 space-y-0.5">
                   {selectionLines.map((line, i) => (
@@ -246,7 +252,7 @@ export function OrderSummaryPage({
                 </div>
               ) : null}
               <p className="text-xs mt-0.5" style={{ color: priceColor }}>
-                ₪{formatPrice(item.priceCents)} × {item.quantity}
+                ₪{formatPrice(item.priceCents)}
               </p>
             </div>
           </div>
@@ -349,7 +355,7 @@ export function OrderSummaryPage({
                 }),
               }}
             >
-              לתשלום
+              הזמן
             </button>
           </div>
         )}
