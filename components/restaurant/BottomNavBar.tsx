@@ -163,6 +163,7 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
               requestAnimationFrame(() => setOffsetY(0));
               return;
             }
+            e.stopPropagation();
             setPressedCircle("bell");
           }}
           onPointerUp={(e) => {

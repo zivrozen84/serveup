@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { DishExpansionModal, type DishForExpansion } from "./DishExpansionModal";
 import { BottomNavBar } from "./BottomNavBar";
 import { FlyingFoodDisc } from "./FlyingFoodDisc";
+import { CallWaiterModal } from "./CallWaiterModal";
 import { useOrderSession } from "./OrderSessionContext";
 
 const PHONE_WIDTH = 420;
@@ -91,9 +92,6 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const orderSession = useOrderSession();
   const [activeCat, setActiveCat] = useState(categories[0]?.id ?? null);
   const [expansionDish, setExpansionDish] = useState<DishForExpansion | null>(null);
-  useEffect(() => {
-    if (orderSession) orderSession.refreshCart();
-  }, [orderSession]);
   const onAddToCart = useCallback(
     (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => {
       orderSession?.addToCart(payload.dishId, payload.quantity, payload.priceCents, payload.selections);
@@ -139,6 +137,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const [copiedParamSourceDishId, setCopiedParamSourceDishId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [flyToCart, setFlyToCart] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
+  const [callWaiterOpen, setCallWaiterOpen] = useState(false);
   const flyResolveRef = useRef<(() => void) | null>(null);
   const cartCircleRef = useRef<HTMLSpanElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -279,6 +278,28 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const tableLabelText = orderSession?.label
     ? (orderSession.label.startsWith("שולחן") ? orderSession.label : `שולחן ${orderSession.label}`)
     : null;
+
+  const handleCallWaiter = useCallback(async () => {
+    if (!orderSlug || !orderSessionToken) return;
+    try {
+      const res = await fetch(`/api/r/${orderSlug}/session/${orderSessionToken}/call-waiter`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) showToast("קראנו למלצר");
+      else if (res.status === 400) showToast("אין שולחן מקושר להזמנה");
+    } catch {
+      showToast("שגיאה בשליחת הקריאה");
+    }
+  }, [orderSlug, orderSessionToken, showToast]);
+
+  const handleBellClick = useCallback(() => {
+    if (orderSession && orderSlug && orderSessionToken) {
+      setCallWaiterOpen(true);
+    } else if (phoneLayout || forcePreview) {
+      showToast("קריאה למלצר זמינה רק כשנכנסים דרך לינק השולחן");
+    }
+  }, [orderSession, orderSlug, orderSessionToken, phoneLayout, forcePreview, showToast]);
   const content = (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col menu-scalable" dir="rtl" style={contentStyle}>
       <div className="flex-1 flex flex-col min-h-0">
@@ -590,23 +611,34 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const phoneContainerClass = "relative overflow-hidden bg-black rounded-[2rem]";
   const phoneContainerStyle = { width: PHONE_WIDTH, maxWidth: "100%" };
 
+  const showCallWaiter = !!(orderSession && orderSlug && orderSessionToken);
+
   return (
     <>
+      {showCallWaiter && (
+        <CallWaiterModal
+          open={callWaiterOpen}
+          onOpenChange={setCallWaiterOpen}
+          fillColor={bottomNavFillColor}
+          iconColor={bottomNavIconColor}
+          onCallWaiter={handleCallWaiter}
+        />
+      )}
       {flyToCart && typeof document !== "undefined" && createPortal(
         <FlyingFoodDisc from={flyToCart.from} to={flyToCart.to} onComplete={handleFlyComplete} />,
         document.body
       )}
-      {toastMessage && (
-        <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg bg-stone-800 text-white text-sm shadow-lg border border-white/20 animate-in fade-in duration-200"
-          role="status"
-        >
-          {toastMessage}
-        </div>
-      )}
       {!showPhoneFrame ? (
         <div className="min-h-screen flex justify-center bg-stone-900">
           <div style={{ ...phoneContainerStyle, maxHeight: "min(100vh, 100dvh)" }} className="relative overflow-hidden flex flex-col">
+            {toastMessage && (
+              <div
+                className="absolute top-11 left-1/2 -translate-x-1/2 z-[200] px-3 py-1.5 rounded-lg bg-stone-800 text-white text-xs shadow-lg border border-white/20 animate-in fade-in duration-200"
+                role="status"
+              >
+                {toastMessage}
+              </div>
+            )}
             <div className="flex-1 min-h-0 relative flex flex-col">
               {staticBgStyle && <div className="absolute inset-0 z-0" style={staticBgStyle} aria-hidden />}
               <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20">{content}</div>
@@ -616,6 +648,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 fillColor={bottomNavFillColor}
                 iconColor={bottomNavIconColor}
                 visible
+                onBellClick={(phoneLayout || forcePreview || (orderSession && orderSlug && orderSessionToken)) ? handleBellClick : undefined}
                 cartItemsCount={orderSession?.cartItems.length ?? 0}
                 cartLabel={orderSession ? "סיכום הזמנה" : undefined}
                 cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
@@ -673,9 +706,17 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
       {showPhoneFrame ? (
         <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
           <div
-            className="rounded-[2.5rem] bg-black p-2 shadow-2xl"
+            className="rounded-[2.5rem] bg-black p-2 shadow-2xl relative"
             style={phoneContainerStyle}
           >
+            {toastMessage && (
+              <div
+                className="absolute top-11 left-1/2 -translate-x-1/2 z-[200] px-3 py-1.5 rounded-lg bg-stone-800 text-white text-xs shadow-lg border border-white/20 animate-in fade-in duration-200"
+                role="status"
+              >
+                {toastMessage}
+              </div>
+            )}
             <div className={`${phoneContainerClass} flex flex-col relative`} style={{ minHeight: "min(90vh, 700px)", maxHeight: "min(90vh, 700px)" }}>
               <div className="h-6 bg-black flex justify-center shrink-0">
                 <div className="w-24 h-4 bg-stone-900 rounded-full" />
@@ -688,14 +729,15 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
               </div>
               <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pointer-events-none [&>*]:pointer-events-auto">
                 <BottomNavBar
-                fillColor={bottomNavFillColor}
-                iconColor={bottomNavIconColor}
-                visible
-                cartItemsCount={orderSession?.cartItems.length ?? 0}
-                cartLabel={orderSession ? "סיכום הזמנה" : undefined}
-                cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
-                cartCircleRef={cartCircleRef}
-              />
+                  fillColor={bottomNavFillColor}
+                  iconColor={bottomNavIconColor}
+                  visible
+                  onBellClick={(phoneLayout || forcePreview || (orderSession && orderSlug && orderSessionToken)) ? handleBellClick : undefined}
+                  cartItemsCount={orderSession?.cartItems.length ?? 0}
+                  cartLabel={orderSession ? "סיכום הזמנה" : undefined}
+                  cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
+                  cartCircleRef={cartCircleRef}
+                />
               </div>
               {expansionDish && canExpandDish && (
                 <DishExpansionModal

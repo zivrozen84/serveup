@@ -1,5 +1,7 @@
 "use client";
 
+import { Bell } from "lucide-react";
+
 interface Table {
   id: number;
   tableNumber: number;
@@ -31,6 +33,8 @@ interface ReceptionMapViewProps {
   ordersCountByTableId?: Record<number, number>;
   /** שולחנות עם הזמנות שעברו את זמן ההתראה – תג אדום במקום צהוב */
   ordersAlertTableIds?: Set<number>;
+  /** שולחנות שקוראים למלצר – צהוב, אפקט הגדלה, אייקון פעמון (הפופאפ מוצג בכרטיסיית השולחן) */
+  ordersCallingWaiterTableIds?: Set<number>;
 }
 
 export function ReceptionMapView({
@@ -40,6 +44,7 @@ export function ReceptionMapView({
   onSelectTable,
   ordersCountByTableId = {},
   ordersAlertTableIds,
+  ordersCallingWaiterTableIds,
 }: ReceptionMapViewProps) {
   return (
     <div
@@ -53,16 +58,24 @@ export function ReceptionMapView({
         const door = isDoor(t);
         const label = t.label || String(t.tableNumber);
         const hasOrders = (ordersCountByTableId[t.id] ?? 0) > 0;
-        const isAlert = !door && hasOrders && ordersAlertTableIds?.has(t.id);
+        const isCallingWaiter = !door && ordersCallingWaiterTableIds?.has(t.id);
+        const isAlert = !door && hasOrders && !isCallingWaiter && ordersAlertTableIds?.has(t.id);
         const selected = selectedTableId === t.id;
         const size = tableSizePercent(t);
+
+        const handleClick = () => {
+          if (door) return;
+          onSelectTable(selectedTableId === t.id ? null : t.id);
+        };
 
         return (
           <button
             key={t.id}
             type="button"
-            onClick={() => (door ? null : onSelectTable(selectedTableId === t.id ? null : t.id))}
-            className="absolute flex flex-col items-center justify-center transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg"
+            onClick={handleClick}
+            className={`absolute flex flex-col items-center justify-center transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg ${
+              isCallingWaiter ? "animate-waiter-call hover:scale-110" : "hover:scale-105"
+            }`}
             style={{
               left: `${px}%`,
               top: `${py}%`,
@@ -74,22 +87,39 @@ export function ReceptionMapView({
             }}
           >
             <div
-              className={`relative w-full h-full flex flex-col items-center justify-center text-white font-bold border-2 text-[clamp(8px,1.8vw,14px)] leading-tight ${
-                selected ? "ring-2 ring-white ring-offset-1 ring-offset-[#1a1d24]" : ""
-              } ${!door && hasOrders ? (isAlert ? "shadow-lg shadow-red-500/40" : "shadow-lg shadow-amber-500/30") : ""}`}
-              style={{
-                backgroundColor: door ? "#ffffff" : primaryColor,
-                borderRadius: circle ? "50%" : door ? "4px" : "8px",
-              }}
-            >
-              {!door && hasOrders && (
+                className={`relative w-full h-full flex flex-col items-center justify-center text-white font-bold border-2 text-[clamp(8px,1.8vw,14px)] leading-tight ${
+                  selected ? "ring-2 ring-white ring-offset-1 ring-offset-[#1a1d24]" : ""
+                } ${
+                  isCallingWaiter
+                    ? "shadow-lg shadow-amber-400/50 bg-amber-500"
+                    : !door && hasOrders
+                      ? isAlert
+                        ? "shadow-lg shadow-red-500/40"
+                        : "shadow-lg shadow-amber-500/30"
+                      : ""
+                }`}
+                style={{
+                  backgroundColor: door ? "#ffffff" : isCallingWaiter ? "#eab308" : primaryColor,
+                  borderRadius: circle ? "50%" : door ? "4px" : "8px",
+                }}
+              >
+                {isCallingWaiter && (
+                  <span
+                    className="absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full w-5 h-5 flex items-center justify-center rounded-full bg-amber-400 text-[#1a1d24] z-10"
+                    aria-hidden
+                    title="קורא למלצר"
+                  >
+                    <Bell className="w-2.5 h-2.5" strokeWidth={2.5} />
+                  </span>
+                )}
+              {!door && hasOrders && !isCallingWaiter && (
                 <span
                   className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse border border-[#1a1d24] z-10"
                   aria-hidden
                   title="שולחן פעיל"
                 />
               )}
-              {!door && hasOrders && (
+              {!door && hasOrders && !isCallingWaiter && (
                 <span
                   className={`absolute -top-[2px] -right-[2px] min-w-[14px] h-3.5 px-0.5 rounded-full text-white text-[9px] font-bold flex items-center justify-center border border-[#1a1d24] z-10 leading-none ${
                     isAlert ? "bg-red-500" : "bg-amber-500"

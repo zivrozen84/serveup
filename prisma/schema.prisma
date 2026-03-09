@@ -84,6 +84,7 @@ model Restaurant {
   receptionDontNotifyReady Boolean @default(false)  // מסך קבלה: אל תודיע מוכן, תמחק אחרי X דקות
   receptionAutoDeleteMinutes Int?  // מסך קבלה: מחק הזמנות אוטומטית אחרי דקות (למשל 30) כש־receptionDontNotifyReady
   receptionAlertAfterMinutes Int?  // מסך קבלה: התראת זמן – שולחן וכרטיסיה אדומים + צליל אחרי X דקות
+  receptionWaiterPopupDisabled Boolean @default(false)  // מסך קבלה: אל תציג פופאפ קריאה למלצר – רק אפקט שולחן + צליל
 
   tables        Table[]
   categories    Category[]
@@ -177,9 +178,10 @@ model OrderSession {
   tableId      Int?      // אופציונלי – שולחן מקושר (מהמפה)
   token        String    @unique // מזהה ב-URL – פתיחת הלינק עם הטוקן מחזירה את אותו סשן
   label        String?   // תווית להצגה (למשל "שולחן 3" או "טרמינל 1")
-  status       String    @default("active") // active | closed | expired
-  createdAt    DateTime  @default(now())
-  expiresAt    DateTime  // תום תוקף (למשל 90 דקות מהפתיחה)
+  status          String    @default("active") // active | closed | expired
+  callingWaiterAt DateTime? // קריאה למלצר – מוצג במסך הקבלה עד לוחצים "קיבלתי"
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime  // תום תוקף (למשל 90 דקות מהפתיחה)
 
   restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   table        Table?           @relation(fields: [tableId], references: [id], onDelete: SetNull)

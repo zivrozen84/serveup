@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Check, Clock, Settings, X } from "lucide-react";
+import { Bell, Check, Clock, Settings, X } from "lucide-react";
 import { ReceptionMapView } from "@/components/admin/ReceptionMapView";
 
 let bellAudioContextRef: AudioContext | null = null;
@@ -59,6 +59,38 @@ function playAlertSound() {
     };
     playBeep(ctx.currentTime);
     playBeep(ctx.currentTime + 0.25);
+  } catch {
+    // ignore
+  }
+}
+
+/** צליל קריאה למלצר – צלצול פעמון חוזר כ־5 שניות */
+function playWaiterCallRing() {
+  try {
+    const ctx = getBellAudioContext();
+    if (!ctx) return;
+    const duration = 5;
+    const at = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 1200;
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(0.2, at + 0.05);
+    let t = at + 0.05;
+    while (t < at + duration) {
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.02, t + 0.15);
+      gain.gain.setValueAtTime(0.02, t + 0.4);
+      gain.gain.linearRampToValueAtTime(0.2, t + 0.45);
+      t += 0.6;
+    }
+    gain.gain.exponentialRampToValueAtTime(0.001, at + duration + 0.2);
+    osc.start(at);
+    osc.stop(at + duration + 0.3);
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
   } catch {
     // ignore
   }
@@ -202,6 +234,7 @@ interface ReceptionCabalaClientProps {
   initialDontNotify: boolean;
   initialAutoDeleteMinutes: number;
   initialAlertAfterMinutes: number;
+  initialWaiterPopupDisabled: boolean;
 }
 
 export function ReceptionCabalaClient({
@@ -212,18 +245,23 @@ export function ReceptionCabalaClient({
   initialDontNotify,
   initialAutoDeleteMinutes,
   initialAlertAfterMinutes,
+  initialWaiterPopupDisabled,
 }: ReceptionCabalaClientProps) {
   const [orders, setOrders] = useState<SubmissionDto[]>([]);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [dontNotify, setDontNotify] = useState(initialDontNotify);
   const [autoDeleteMinutes, setAutoDeleteMinutes] = useState(initialAutoDeleteMinutes);
   const [alertAfterMinutes, setAlertAfterMinutes] = useState(initialAlertAfterMinutes);
+  const [waiterPopupDisabled, setWaiterPopupDisabled] = useState(initialWaiterPopupDisabled);
+  const [callingWaiterTables, setCallingWaiterTables] = useState<Array<{ tableId: number; label: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [markingGroupIds, setMarkingGroupIds] = useState<Set<number>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const prevOrderCountRef = useRef<number>(0);
   const prevSubmissionIdsRef = useRef<Set<number>>(new Set());
+  const prevCallingTableIdsRef = useRef<Set<number>>(new Set());
+  const isFirstCallingLoadRef = useRef(true);
   const isFirstLoadRef = useRef(true);
   const bellUnlockedRef = useRef(false);
   useEffect(() => {
@@ -298,6 +336,32 @@ export function ReceptionCabalaClient({
       setDontNotify(data.receptionDontNotifyReady ?? false);
       setAutoDeleteMinutes(data.receptionAutoDeleteMinutes ?? 30);
       setAlertAfterMinutes(data.receptionAlertAfterMinutes ?? 10);
+      setWaiterPopupDisabled(data.receptionWaiterPopupDisabled ?? false);
+    }
+  }, [restaurantId]);
+
+  const fetchCallingWaiter = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/admin/restaurants/${restaurantId}/reception/calling-waiter`,
+        { credentials: "include" }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const tables = (data.tables ?? []) as Array<{ tableId: number; label: string; tableNumber: number }>;
+        const newTables = tables.map((t) => ({ tableId: t.tableId, label: t.label ?? String(t.tableNumber) }));
+        const newIds = new Set(newTables.map((t) => t.tableId));
+        const prevIds = prevCallingTableIdsRef.current;
+        const hasNewCalling = !isFirstCallingLoadRef.current && newTables.some((t) => !prevIds.has(t.tableId));
+        if (hasNewCalling) {
+          playWaiterCallRing();
+        }
+        isFirstCallingLoadRef.current = false;
+        prevCallingTableIdsRef.current = newIds;
+        setCallingWaiterTables(newTables);
+      }
+    } catch {
+      // ignore
     }
   }, [restaurantId]);
 
@@ -306,6 +370,12 @@ export function ReceptionCabalaClient({
     const t = setInterval(fetchOrders, POLL_MS);
     return () => clearInterval(t);
   }, [fetchOrders]);
+
+  useEffect(() => {
+    fetchCallingWaiter();
+    const t = setInterval(fetchCallingWaiter, POLL_MS);
+    return () => clearInterval(t);
+  }, [fetchCallingWaiter]);
 
   useEffect(() => {
     fetchSettings();
@@ -442,6 +512,44 @@ export function ReceptionCabalaClient({
     }
   };
 
+  const handleToggleWaiterPopupDisabled = async () => {
+    const next = !waiterPopupDisabled;
+    setWaiterPopupDisabled(next);
+    try {
+      await fetch(`/api/admin/restaurants/${restaurantId}/reception/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receptionWaiterPopupDisabled: next }),
+        credentials: "include",
+      });
+    } catch {
+      setWaiterPopupDisabled(!next);
+    }
+  };
+
+  const handleClearCallingWaiter = useCallback(
+    async (tableId: number) => {
+      try {
+        const res = await fetch(
+          `/api/admin/restaurants/${restaurantId}/reception/calling-waiter`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tableId }),
+            credentials: "include",
+          }
+        );
+        if (res.ok) {
+          setCallingWaiterTables((prev) => prev.filter((t) => t.tableId !== tableId));
+          await fetchCallingWaiter();
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [restaurantId, fetchCallingWaiter]
+  );
+
   const ordersAlertTableIds = useMemo(() => {
     if (alertThresholdSec == null) return new Set<number>();
     const set = new Set<number>();
@@ -547,6 +655,15 @@ export function ReceptionCabalaClient({
                       />
                       <span>דק׳</span>
                     </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-white/80 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={waiterPopupDisabled}
+                        onChange={handleToggleWaiterPopupDisabled}
+                        className="w-3.5 h-3.5 rounded border-white/30"
+                      />
+                      <span>אל תציג פופאפ קריאה למלצר (רק אפקט שולחן + צליל)</span>
+                    </label>
                   </div>
                   <p className="text-white/40 text-[10px] mt-2">נשמר אוטומטית</p>
                 </div>
@@ -650,8 +767,50 @@ export function ReceptionCabalaClient({
           onSelectTable={setSelectedTableId}
           ordersCountByTableId={ordersCountByTableId}
           ordersAlertTableIds={ordersAlertTableIds}
+          ordersCallingWaiterTableIds={new Set(callingWaiterTables.map((t) => t.tableId))}
         />
       </div>
+
+      {/* פופאפ קריאה למלצר */}
+      {!waiterPopupDisabled &&
+        callingWaiterTables.length > 0 &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[110] bg-black/60"
+              aria-hidden
+              onClick={() => handleClearCallingWaiter(callingWaiterTables[0].tableId)}
+            />
+            <div
+              className="fixed inset-0 z-[111] flex items-center justify-center p-4"
+              role="dialog"
+              aria-label="קריאה למלצר"
+            >
+              <div
+                className="rounded-xl border border-amber-500/50 bg-[#1a1d24] shadow-2xl p-6 flex flex-col items-center gap-4 min-w-[280px] max-w-[90vw]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-2 text-amber-400">
+                  <Bell className="w-8 h-8" />
+                  <h3 className="text-lg font-bold text-white">
+                    שולחן {callingWaiterTables[0].label} קורא למלצר
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearCallingWaiter(callingWaiterTables[0].tableId)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                  style={{ backgroundColor: "#2F7C73" }}
+                >
+                  <Check className="w-4 h-4" />
+                  קיבלתי
+                </button>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
 
       {/* הזמנה ספציפית – רק כשיש שולחן נבחר */}
       {selectedTableId != null && (
@@ -666,6 +825,23 @@ export function ReceptionCabalaClient({
               סגור
             </button>
           </div>
+          {callingWaiterTables.some((ct) => ct.tableId === selectedTableId) && (
+            <div className="flex justify-end mb-3" dir="rtl">
+              <div className="rounded-lg border border-amber-400 bg-amber-500 shadow shadow-amber-400/30 px-2 py-1.5 flex flex-col gap-1 w-max max-w-[140px]">
+                <div className="flex items-center gap-1 text-[#1a1d24] font-bold text-xs">
+                  <Bell className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+                  <span>קרא למלצר</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearCallingWaiter(selectedTableId)}
+                  className="py-1 px-2 rounded text-[11px] font-medium text-amber-900 bg-amber-200 hover:bg-amber-300 border border-amber-600/40 transition-colors w-full"
+                >
+                  קיבלתי
+                </button>
+              </div>
+            </div>
+          )}
           {tableOrders.length === 0 ? (
             <p className="text-white/50 text-xs">אין הזמנות ממתינות לשולחן זה</p>
           ) : (

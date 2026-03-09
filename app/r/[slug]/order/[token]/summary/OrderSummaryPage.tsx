@@ -2,7 +2,7 @@
 
 import { useOrderSession, type CartItemDto, type OrderedItemDto } from "@/components/restaurant/OrderSessionContext";
 import { DishExpansionModal, type DishForExpansion } from "@/components/restaurant/DishExpansionModal";
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 function TrashIcon({ className }: { className?: string }) {
   return (
@@ -131,10 +131,6 @@ export function OrderSummaryPage({
   const tabPrimary = summaryTabPrimaryColor?.trim() || primaryColor;
   const tabSecondary = summaryTabSecondaryColor?.trim() || "#475569";
   const submitButtonColor = summarySubmitButtonColor?.trim() || "#00CD98";
-
-  useEffect(() => {
-    orderSession?.refreshCart();
-  }, [orderSession]);
 
   const editDish: DishForExpansion | null =
     editingCartItem && menuDishes.length > 0

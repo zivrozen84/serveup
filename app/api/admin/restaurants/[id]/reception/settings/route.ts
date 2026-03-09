@@ -19,6 +19,7 @@ export async function GET(
       receptionDontNotifyReady: true,
       receptionAutoDeleteMinutes: true,
       receptionAlertAfterMinutes: true,
+      receptionWaiterPopupDisabled: true,
     },
   });
   if (!r) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -27,6 +28,7 @@ export async function GET(
     receptionDontNotifyReady: r.receptionDontNotifyReady ?? false,
     receptionAutoDeleteMinutes: r.receptionAutoDeleteMinutes ?? 30,
     receptionAlertAfterMinutes: r.receptionAlertAfterMinutes ?? 10,
+    receptionWaiterPopupDisabled: r.receptionWaiterPopupDisabled ?? false,
   });
 }
 
@@ -44,6 +46,7 @@ export async function PATCH(
     receptionDontNotifyReady?: boolean;
     receptionAutoDeleteMinutes?: number;
     receptionAlertAfterMinutes?: number;
+    receptionWaiterPopupDisabled?: boolean;
   } = {};
   try {
     body = await req.json();
@@ -55,6 +58,7 @@ export async function PATCH(
     receptionDontNotifyReady?: boolean;
     receptionAutoDeleteMinutes?: number | null;
     receptionAlertAfterMinutes?: number | null;
+    receptionWaiterPopupDisabled?: boolean;
   } = {};
   if (typeof body.receptionDontNotifyReady === "boolean")
     data.receptionDontNotifyReady = body.receptionDontNotifyReady;
@@ -66,6 +70,8 @@ export async function PATCH(
     const n = Number(body.receptionAlertAfterMinutes);
     data.receptionAlertAfterMinutes = Number.isFinite(n) && n >= 1 ? n : null;
   }
+  if (typeof body.receptionWaiterPopupDisabled === "boolean")
+    data.receptionWaiterPopupDisabled = body.receptionWaiterPopupDisabled;
 
   await prisma.restaurant.update({
     where: { id },

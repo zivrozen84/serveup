@@ -26,6 +26,7 @@ export default async function ReceptionPage({
       receptionDontNotifyReady: true,
       receptionAutoDeleteMinutes: true,
       receptionAlertAfterMinutes: true,
+      receptionWaiterPopupDisabled: true,
     },
   });
   if (!restaurant) notFound();
@@ -52,6 +53,7 @@ export default async function ReceptionPage({
       initialDontNotify={restaurant.receptionDontNotifyReady ?? false}
       initialAutoDeleteMinutes={restaurant.receptionAutoDeleteMinutes ?? 30}
       initialAlertAfterMinutes={restaurant.receptionAlertAfterMinutes ?? 10}
+      initialWaiterPopupDisabled={restaurant.receptionWaiterPopupDisabled ?? false}
     />
   );
 }
