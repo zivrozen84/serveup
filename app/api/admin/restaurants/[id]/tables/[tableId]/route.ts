@@ -33,6 +33,7 @@ export async function PATCH(
   if (data.positionX !== undefined) updateData.positionX = data.positionX;
   if (data.positionY !== undefined) updateData.positionY = data.positionY;
   if (data.shape !== undefined) updateData.shape = data.shape;
+  if (data.isOffline !== undefined) updateData.isOffline = data.isOffline;
 
   const updated = await prisma.table.update({
     where: { id: tableId },

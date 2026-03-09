@@ -603,7 +603,7 @@ export function DishExpansionModal({
               <span className="w-8 text-center font-bold text-white text-lg">{quantity}</span>
               <button
                 type="button"
-                onClick={() => setQuantity((q) => q + 1)}
+                onClick={() => setQuantity((q) => Math.min(10, q + 1))}
                 onPointerDown={() => setQuantityPressed("plus")}
                 onPointerUp={() => setQuantityPressed(null)}
                 onPointerLeave={() => setQuantityPressed(null)}
@@ -667,7 +667,7 @@ export function DishExpansionModal({
                       onOpenChange(false);
                     }
                   }}
-                  className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
+                  className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-[transform,filter] duration-150 active:scale-[0.96] active:brightness-90 ${
                     addButtonShrink ? "scale-[0.85]" : "scale-100"
                   } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
                   style={{ backgroundColor: cartColor, color: cartTextColor, opacity: controlsOpacity }}
@@ -726,12 +726,12 @@ export function DishExpansionModal({
                     }
                   }
                 }}
-                className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-all duration-150 ${
+                className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold transition-[transform,filter] duration-150 active:scale-[0.96] active:brightness-90 ${
                   addButtonShrink ? "scale-[0.85]" : "scale-100"
                 } ${cartBarGlow ? "shadow-[0_0_16px_4px_rgba(220,38,38,0.6)]" : ""}`}
                 style={{ backgroundColor: cartColor, color: cartTextColor, opacity: controlsOpacity }}
               >
-                הוסף לעגלה
+                הוסף לסל
               </button>
             )}
           </div>

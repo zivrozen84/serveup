@@ -37,6 +37,9 @@ export type RestaurantPreviewSnapshot = {
   bottomNavColor?: string | null;
   bottomNavIconColor?: string | null;
   summaryCardColor?: string | null;
+  summaryTabPrimaryColor?: string | null;
+  summaryTabSecondaryColor?: string | null;
+  summarySubmitButtonColor?: string | null;
   menuDisplayFormat?: string;
   frameUrl?: string | null;
   backgroundUrl?: string | null;
@@ -73,6 +76,9 @@ interface RestaurantFormProps {
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     summaryCardColor?: string | null;
+    summaryTabPrimaryColor?: string | null;
+    summaryTabSecondaryColor?: string | null;
+    summarySubmitButtonColor?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;
@@ -82,6 +88,8 @@ interface RestaurantFormProps {
     frameVariants?: string | null;
     textSize?: number | null;
     fontFamily?: string | null;
+    openTime?: string | null;
+    closeTime?: string | null;
   };
 }
 
@@ -120,10 +128,15 @@ export function RestaurantForm({
   const [bottomNavColor, setBottomNavColor] = useState(initialData?.bottomNavColor ?? initialData?.cartColor ?? "");
   const [bottomNavIconColor, setBottomNavIconColor] = useState(initialData?.bottomNavIconColor ?? "#ffffff");
   const [summaryCardColor, setSummaryCardColor] = useState(initialData?.summaryCardColor ?? "#292524");
+  const [summaryTabPrimaryColor, setSummaryTabPrimaryColor] = useState(initialData?.summaryTabPrimaryColor ?? "#c2410c");
+  const [summaryTabSecondaryColor, setSummaryTabSecondaryColor] = useState(initialData?.summaryTabSecondaryColor ?? "#475569");
+  const [summarySubmitButtonColor, setSummarySubmitButtonColor] = useState(initialData?.summarySubmitButtonColor ?? "#00CD98");
   const [menuDisplayFormat, setMenuDisplayFormat] = useState<"large" | "small" | "compact" | "imageRight">(
     (initialData?.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large"
   );
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
+  const [openTime, setOpenTime] = useState(initialData?.openTime ?? "");
+  const [closeTime, setCloseTime] = useState(initialData?.closeTime ?? "");
   const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl ?? "");
   const [frameUrl, setFrameUrl] = useState(initialData?.frameUrl ?? NO_FRAME);
   const [frameVariants, setFrameVariants] = useState<string[]>(() => {
@@ -181,6 +194,9 @@ export function RestaurantForm({
       bottomNavColor: bottomNavColor || null,
       bottomNavIconColor: bottomNavIconColor || null,
       summaryCardColor: summaryCardColor || null,
+      summaryTabPrimaryColor: summaryTabPrimaryColor || null,
+      summaryTabSecondaryColor: summaryTabSecondaryColor || null,
+      summarySubmitButtonColor: summarySubmitButtonColor || null,
       menuDisplayFormat,
       frameUrl: frameUrl || null,
       backgroundUrl: backgroundUrl || null,
@@ -204,6 +220,9 @@ export function RestaurantForm({
     bottomNavColor,
     bottomNavIconColor,
     summaryCardColor,
+    summaryTabPrimaryColor,
+    summaryTabSecondaryColor,
+    summarySubmitButtonColor,
     menuDisplayFormat,
     frameUrl,
     backgroundUrl,
@@ -236,8 +255,13 @@ export function RestaurantForm({
       (bottomNavColor || "") !== (initialData.bottomNavColor || "") ||
       (bottomNavIconColor || "") !== (initialData.bottomNavIconColor || "") ||
       (summaryCardColor || "") !== (initialData.summaryCardColor || "") ||
+      (summaryTabPrimaryColor || "") !== (initialData.summaryTabPrimaryColor || "") ||
+      (summaryTabSecondaryColor || "") !== (initialData.summaryTabSecondaryColor || "") ||
+      (summarySubmitButtonColor || "") !== (initialData.summarySubmitButtonColor || "") ||
       menuDisplayFormat !== (initialData.menuDisplayFormat ?? "large") ||
       isActive !== initialData.isActive ||
+      (openTime || "") !== (initialData.openTime || "") ||
+      (closeTime || "") !== (initialData.closeTime || "") ||
       (bannerUrl || "") !== (initialData.bannerUrl || "") ||
       (frameUrl || "") !== (initialData.frameUrl || "") ||
       (backgroundUrl || "") !== (initialData.backgroundUrl || ""));
@@ -403,8 +427,13 @@ export function RestaurantForm({
       bottomNavColor: bottomNavColor?.trim() || null,
       bottomNavIconColor: bottomNavIconColor?.trim() || null,
       summaryCardColor: summaryCardColor?.trim() || null,
+      summaryTabPrimaryColor: summaryTabPrimaryColor?.trim() || null,
+      summaryTabSecondaryColor: summaryTabSecondaryColor?.trim() || null,
+      summarySubmitButtonColor: summarySubmitButtonColor?.trim() || null,
       menuDisplayFormat,
       isActive,
+      openTime: openTime?.trim() || null,
+      closeTime: closeTime?.trim() || null,
       ...(initialData?.id && { logoUrl: initialData.logoUrl ?? null }),
       bannerUrl: bannerUrl || undefined,
       frameUrl: frameUrl || undefined,
@@ -452,8 +481,13 @@ export function RestaurantForm({
     setBottomNavColor(initialData.bottomNavColor ?? "");
     setBottomNavIconColor(initialData.bottomNavIconColor ?? "#ffffff");
     setSummaryCardColor(initialData.summaryCardColor ?? "#292524");
+    setSummaryTabPrimaryColor(initialData.summaryTabPrimaryColor ?? "#c2410c");
+    setSummaryTabSecondaryColor(initialData.summaryTabSecondaryColor ?? "#475569");
+    setSummarySubmitButtonColor(initialData.summarySubmitButtonColor ?? "#00CD98");
     setMenuDisplayFormat((initialData.menuDisplayFormat as "large" | "small" | "compact" | "imageRight") ?? "large");
     setIsActive(initialData.isActive);
+    setOpenTime(initialData.openTime ?? "");
+    setCloseTime(initialData.closeTime ?? "");
     setBannerUrl(initialData.bannerUrl ?? "");
     setFrameUrl(initialData.frameUrl ?? NO_FRAME);
     setBackgroundUrl(initialData.backgroundUrl ?? "");
@@ -521,6 +555,31 @@ export function RestaurantForm({
         <div>
           <Label>עיר</Label>
           <Input value={city} onChange={(e) => setCity(e.target.value)} required />
+        </div>
+        <div className="grid gap-2">
+          <Label>שעות פעילות</Label>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-white/70">מ</span>
+              <Input
+                type="time"
+                value={openTime || ""}
+                onChange={(e) => setOpenTime(e.target.value)}
+                className="w-28"
+              />
+            </div>
+            <span className="text-white/50">–</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-white/70">עד</span>
+              <Input
+                type="time"
+                value={closeTime || ""}
+                onChange={(e) => setCloseTime(e.target.value)}
+                className="w-28"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-white/50">השאר ריק אם המסעדה פתוחה 24/7. מחוץ לשעות יוצג &quot;המסעדה סגורה עכשיו&quot;.</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-6 items-end">
@@ -668,6 +727,42 @@ export function RestaurantForm({
             <Input value={summaryCardColor} onChange={(e) => setSummaryCardColor(e.target.value)} className="w-20 h-9 text-sm" />
           </div>
         </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">לחיצה ראשי סיכום הזמנה</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={summaryTabPrimaryColor}
+              onChange={(e) => setSummaryTabPrimaryColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={summaryTabPrimaryColor} onChange={(e) => setSummaryTabPrimaryColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">לחיצה משני סיכום הזמנה</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={summaryTabSecondaryColor}
+              onChange={(e) => setSummaryTabSecondaryColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={summaryTabSecondaryColor} onChange={(e) => setSummaryTabSecondaryColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">כפתור הזמן</Label>
+          <div className="flex gap-1 items-center">
+            <input
+              type="color"
+              value={summarySubmitButtonColor}
+              onChange={(e) => setSummarySubmitButtonColor(e.target.value)}
+              className="h-9 w-10 rounded border cursor-pointer border-white/20"
+            />
+            <Input value={summarySubmitButtonColor} onChange={(e) => setSummarySubmitButtonColor(e.target.value)} className="w-20 h-9 text-sm" />
+          </div>
+        </div>
       </div>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
         <div className="flex flex-col gap-1">
@@ -700,15 +795,25 @@ export function RestaurantForm({
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs">דיסקית נופלת</Label>
-          <button
-            type="button"
-            onClick={() => setFlyingDiscVisibility((v) => ((v ?? 100) > 0 ? 0 : 100))}
-            className={`w-24 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              (flyingDiscVisibility ?? 100) > 0 ? "bg-[#37C27D] text-white" : "bg-white/10 text-white/70 hover:bg-white/20"
-            }`}
-          >
-            {(flyingDiscVisibility ?? 100) > 0 ? "פעיל" : "לא פעיל"}
-          </button>
+          <div className="flex items-center gap-4">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="text-white hover:text-white hover:opacity-90 text-sm px-4 py-1.5 rounded-lg font-medium shrink-0"
+              style={{ backgroundColor: "#37C27D" }}
+            >
+              {saving ? "שומר..." : "שמור"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setFlyingDiscVisibility((v) => ((v ?? 100) > 0 ? 0 : 100))}
+              className={`w-24 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                (flyingDiscVisibility ?? 100) > 0 ? "bg-[#37C27D] text-white" : "bg-white/10 text-white/70 hover:bg-white/20"
+              }`}
+            >
+              {(flyingDiscVisibility ?? 100) > 0 ? "פעיל" : "לא פעיל"}
+            </button>
+          </div>
         </div>
       </div>
       <div>

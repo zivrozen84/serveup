@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Circle, Square, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Circle, Square, Trash2, ChevronUp, ChevronDown, Link2 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,20 @@ interface Table {
   positionY: number | null;
   shape: string | null;
   token: string;
+  isOffline?: boolean;
 }
+
+type ActiveSessionDto = {
+  id: number;
+  tableId: number | null;
+  expiresAt: string;
+  minutesLeft: number;
+};
 
 interface RestaurantMapEditorProps {
   restaurantId: number;
   restaurantName: string;
+  restaurantSlug: string;
   primaryColor: string;
 }
 
@@ -37,6 +46,7 @@ function isDoor(table: Table) {
 export function RestaurantMapEditor({
   restaurantId,
   restaurantName,
+  restaurantSlug,
   primaryColor,
 }: RestaurantMapEditorProps) {
   const [tables, setTables] = useState<Table[]>([]);
@@ -49,6 +59,9 @@ export function RestaurantMapEditor({
   const dragPosRef = useRef<{ x: number; y: number }>({ x: 50, y: 50 });
   const dragMovedRef = useRef(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [activeSessions, setActiveSessions] = useState<ActiveSessionDto[]>([]);
+  const [tableLink, setTableLink] = useState<string | null>(null);
+  const [creatingTableLink, setCreatingTableLink] = useState(false);
 
   const fetchTables = useCallback(async () => {
     const res = await fetch(`/api/admin/restaurants/${restaurantId}/tables`);
@@ -59,9 +72,32 @@ export function RestaurantMapEditor({
     setLoading(false);
   }, [restaurantId]);
 
+  const fetchActiveSessions = useCallback(async () => {
+    const res = await fetch(`/api/admin/restaurants/${restaurantId}/sessions?active=true`, {
+      credentials: "include",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setActiveSessions(
+        data.map((s: { id: number; tableId: number | null; expiresAt: string; minutesLeft: number }) => ({
+          id: s.id,
+          tableId: s.tableId,
+          expiresAt: s.expiresAt,
+          minutesLeft: s.minutesLeft,
+        }))
+      );
+    }
+  }, [restaurantId]);
+
   useEffect(() => {
     fetchTables();
   }, [fetchTables]);
+
+  useEffect(() => {
+    fetchActiveSessions();
+    const t = setInterval(fetchActiveSessions, 20000);
+    return () => clearInterval(t);
+  }, [fetchActiveSessions]);
 
   async function handleAddTable(shape: "circle" | "rectangle") {
     setSaveLoading(true);
@@ -203,17 +239,6 @@ export function RestaurantMapEditor({
 
   const totalCapacity = tables.reduce((s, t) => (isDoor(t) ? s : s + (t.capacity || 0)), 0);
 
-  function moveTableInList(index: number, dir: "up" | "down") {
-    setTables((prev) => {
-      const next = [...prev];
-      const newIndex = dir === "up" ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= next.length) return prev;
-      const [item] = next.splice(index, 1);
-      next.splice(newIndex, 0, item);
-      return next;
-    });
-  }
-
   function moveTableInList(index: number, direction: "up" | "down") {
     setTables((prev) => {
       const next = [...prev];
@@ -242,6 +267,8 @@ export function RestaurantMapEditor({
             const circle = t.shape === "circle";
             const door = isDoor(t);
             const label = t.label || String(t.tableNumber);
+            const sessionsForTable = activeSessions.filter((s) => s.tableId === t.id);
+            const isActive = sessionsForTable.length > 0;
             return (
               <div
                 key={t.id}
@@ -252,6 +279,7 @@ export function RestaurantMapEditor({
                   setEditingTable(t);
                   setEditLabel(label);
                   setEditCapacity(t.capacity);
+                  setTableLink(null);
                 }}
                 onDoubleClick={(e) => {
                   if (door) return; // עבור דלת מספיק לחיצה אחת
@@ -261,6 +289,7 @@ export function RestaurantMapEditor({
                   setEditingTable(t);
                   setEditLabel(label);
                   setEditCapacity(t.capacity);
+                  setTableLink(null);
                 }}
                 className="absolute cursor-grab active:cursor-grabbing select-none flex flex-col items-center justify-center transition-shadow hover:shadow-lg"
                 style={{
@@ -271,16 +300,25 @@ export function RestaurantMapEditor({
                   height: door ? 16 : circle ? 56 : 48,
                 }}
               >
+                {!door && isActive && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 animate-pulse z-10 border-2 border-[#1a1d24]"
+                    aria-hidden
+                  />
+                )}
                 <div
                   className={`w-full h-full flex flex-col items-center justify-center text-white font-bold text-sm border-2 ${
                     editingTable?.id === t.id ? "ring-2 ring-white" : ""
-                  }`}
+                  } ${!door && t.isOffline ? "opacity-50" : ""}`}
                   style={{
                     backgroundColor: door ? "#ffffff" : primaryColor,
                     borderRadius: circle ? "50%" : door ? "4px" : "8px",
                   }}
                 >
                   <span>{door ? "" : label || "?"}</span>
+                  {!door && t.isOffline && (
+                    <span className="text-[10px] font-normal opacity-90">OFF</span>
+                  )}
                 </div>
               </div>
             );
@@ -325,12 +363,13 @@ export function RestaurantMapEditor({
                 setEditingTable(t);
                 setEditLabel(t.label || String(t.tableNumber));
                 setEditCapacity(t.capacity);
+                setTableLink(null);
               }}
             >
               <span className="text-white font-medium flex-1">
                 {isDoor(t)
                   ? "דלת"
-                  : `${t.label || t.tableNumber} - ${t.capacity || 0} מקומות`}
+                  : `${t.label || t.tableNumber} - ${t.capacity || 0} מקומות${t.isOffline ? " (OFFLINE)" : ""}`}
               </span>
               <button
                 type="button"
@@ -373,12 +412,12 @@ export function RestaurantMapEditor({
         </div>
       </aside>
 
-      <Dialog.Root open={!!editingTable} onOpenChange={(o) => !o && setEditingTable(null)}>
+      <Dialog.Root open={!!editingTable} onOpenChange={(o) => { if (!o) { setEditingTable(null); setTableLink(null); } }}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/60 z-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-sm rounded-xl border border-white/5 bg-[#0e1118] p-6 z-50">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md rounded-xl border border-white/5 bg-[#0e1118] p-6 z-50 max-h-[90vh] overflow-y-auto">
             <Dialog.Title className="text-lg font-semibold mb-4 text-white">
-              עריכת שולחן
+              פאנל שולחן
             </Dialog.Title>
             {editingTable && (
               <div className="space-y-4">
@@ -388,6 +427,44 @@ export function RestaurantMapEditor({
                   </p>
                 ) : (
                   <>
+                    {(() => {
+                      const sessionsForTable = activeSessions.filter((s) => s.tableId === editingTable.id);
+                      const minMinutesLeft = sessionsForTable.length > 0
+                        ? Math.min(...sessionsForTable.map((s) => s.minutesLeft))
+                        : null;
+                      return (
+                        <div className="rounded-lg bg-white/5 border border-white/10 p-3 space-y-2 mb-4">
+                          <p className="text-sm font-medium text-white">
+                            טרמינלים פעילים: {sessionsForTable.length}
+                          </p>
+                          {minMinutesLeft != null && (
+                            <p className="text-sm text-white/80">
+                              זמן נותר: {minMinutesLeft} דק׳
+                            </p>
+                          )}
+                          <p className="text-sm text-white/80">
+                            {sessionsForTable.length} אנשים בפנים כרגע
+                          </p>
+                        </div>
+                      );
+                    })()}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-white/80">שולחן OFFLINE</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !editingTable.isOffline;
+                          handleUpdateTable(editingTable.id, { isOffline: next });
+                          setEditingTable((prev) => (prev ? { ...prev, isOffline: next } : null));
+                        }}
+                        className={`w-24 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          editingTable.isOffline ? "bg-amber-600/80 text-white" : "bg-white/10 text-white/70 hover:bg-white/20"
+                        }`}
+                      >
+                        {editingTable.isOffline ? "כבוי" : "פעיל"}
+                      </button>
+                      <p className="text-xs text-white/50">כבוי = הלינק של השולחן לא יעבוד. השולחן נשאר במפה.</p>
+                    </div>
                     <div>
                       <label className="text-sm text-white/80 block mb-1">שם/מספר שולחן</label>
                       <Input
@@ -407,6 +484,58 @@ export function RestaurantMapEditor({
                         className="bg-[#1A1D21] border-white/10 text-white placeholder:text-white/40"
                       />
                     </div>
+                    <div className="pt-2 border-t border-white/10">
+                      <label className="text-sm text-white/80 block mb-2">לינק ל-NFC / שולחן קבוע</label>
+                      {editingTable.isOffline && (
+                        <p className="text-xs text-amber-400 mb-2">השולחן כבוי (OFFLINE). הפעל את השולחן כדי ליצור לינק.</p>
+                      )}
+                      <button
+                        type="button"
+                        disabled={editingTable.isOffline}
+                        onClick={async () => {
+                          setCreatingTableLink(true);
+                          setTableLink(null);
+                          try {
+                            const res = await fetch(`/api/r/${restaurantSlug}/session`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ tableId: editingTable.id }),
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.token) {
+                              const url = typeof window !== "undefined"
+                                ? `${window.location.origin}/r/${restaurantSlug}/order/${data.token}`
+                                : "";
+                              setTableLink(url);
+                            }
+                          } finally {
+                            setCreatingTableLink(false);
+                          }
+                        }}
+                        disabled={creatingTableLink}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-sky-500/50 bg-sky-500/20 text-sky-300 text-sm font-medium hover:bg-sky-500/30 disabled:opacity-50"
+                      >
+                        <Link2 className="w-4 h-4" />
+                        {creatingTableLink ? "יוצר לינק..." : "צור לינק לשולחן"}
+                      </button>
+                      {tableLink && (
+                        <div className="mt-2 flex gap-2 items-center">
+                          <input
+                            type="text"
+                            readOnly
+                            value={tableLink}
+                            className="flex-1 min-w-0 rounded bg-black/30 px-2 py-1.5 text-white/90 text-xs font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard?.writeText(tableLink)}
+                            className="shrink-0 py-1.5 px-3 rounded bg-white/10 hover:bg-white/20 text-white text-xs"
+                          >
+                            העתק
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
                 <div className="flex gap-2 pt-2">
@@ -418,6 +547,7 @@ export function RestaurantMapEditor({
                           capacity: editCapacity,
                         });
                         setEditingTable(null);
+                        setTableLink(null);
                       }}
                       className="text-white"
                       style={{ backgroundColor: primaryColor }}

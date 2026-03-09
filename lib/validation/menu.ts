@@ -30,6 +30,7 @@ export const tableUpdateSchema = z.object({
   positionX: z.number().min(0).max(100).optional(),
   positionY: z.number().min(0).max(100).optional(),
   shape: z.enum(["circle", "rectangle", "door"]).optional(),
+  isOffline: z.boolean().optional(),
 });
 
 export const dishParameterCategorySchema = z.object({

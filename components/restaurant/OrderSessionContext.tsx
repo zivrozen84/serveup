@@ -1,9 +1,32 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+
+const GUEST_ID_KEY = "serveup_guest_id";
+
+function getOrCreateGuestId(): string {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem(GUEST_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(GUEST_ID_KEY, id);
+  }
+  return id;
+}
 
 export type CartItemDto = {
   id: number;
+  dishId: number;
+  dish: { id: number; title: string; imageUrl: string | null; priceCents: number };
+  quantity: number;
+  priceCents: number;
+  selections: unknown;
+};
+
+export type OrderedItemDto = {
+  id: number;
+  submissionId: number;
+  guestId: string;
   dishId: number;
   dish: { id: number; title: string; imageUrl: string | null; priceCents: number };
   quantity: number;
@@ -16,11 +39,14 @@ type OrderSessionContextValue = {
   token: string;
   expiresAt: string;
   label: string | null;
+  guestId: string;
   cartItems: CartItemDto[];
+  orderedItems: OrderedItemDto[];
   setCartItems: React.Dispatch<React.SetStateAction<CartItemDto[]>>;
   addToCart: (dishId: number, quantity: number, priceCents: number, selections?: unknown) => Promise<void>;
   updateCartItemQuantity: (itemId: number, quantity: number) => Promise<void>;
   removeCartItem: (itemId: number) => Promise<void>;
+  submitMyOrder: () => Promise<void>;
   refreshCart: () => Promise<void>;
 };
 
@@ -37,6 +63,7 @@ export function OrderSessionProvider({
   expiresAt,
   label,
   initialCart,
+  initialOrderedItems = [],
 }: {
   children: ReactNode;
   slug: string;
@@ -44,28 +71,42 @@ export function OrderSessionProvider({
   expiresAt: string;
   label: string | null;
   initialCart: CartItemDto[];
+  initialOrderedItems?: OrderedItemDto[];
 }) {
+  const [guestId, setGuestId] = useState("");
   const [cartItems, setCartItems] = useState<CartItemDto[]>(initialCart);
+  const [orderedItems, setOrderedItems] = useState<OrderedItemDto[]>(initialOrderedItems);
+
+  useEffect(() => {
+    setGuestId(getOrCreateGuestId());
+  }, []);
 
   const refreshCart = useCallback(async () => {
+    if (!guestId) return;
     try {
-      const res = await fetch(`/api/r/${slug}/session/${token}/cart`);
+      const res = await fetch(`/api/r/${slug}/session/${token}/cart?guestId=${encodeURIComponent(guestId)}`);
       if (res.ok) {
         const data = await res.json();
-        setCartItems(data);
+        setCartItems(data.myCart ?? []);
+        setOrderedItems(data.orderedItems ?? []);
       }
     } catch {
       // ignore
     }
-  }, [slug, token]);
+  }, [slug, token, guestId]);
+
+  useEffect(() => {
+    if (guestId) refreshCart();
+  }, [guestId, refreshCart]);
 
   const addToCart = useCallback(
     async (dishId: number, quantity: number, priceCents: number, selections?: unknown) => {
+      if (!guestId) return;
       try {
         const res = await fetch(`/api/r/${slug}/session/${token}/cart`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dishId, quantity, priceCents, selections }),
+          body: JSON.stringify({ dishId, quantity, priceCents, selections, guestId }),
         });
         if (!res.ok) return;
         const item = await res.json();
@@ -74,16 +115,17 @@ export function OrderSessionProvider({
         // ignore
       }
     },
-    [slug, token]
+    [slug, token, guestId]
   );
 
   const updateCartItemQuantity = useCallback(
     async (itemId: number, quantity: number) => {
+      if (!guestId) return;
       try {
         const res = await fetch(`/api/r/${slug}/session/${token}/cart/${itemId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quantity }),
+          body: JSON.stringify({ quantity, guestId }),
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -96,14 +138,17 @@ export function OrderSessionProvider({
         // ignore
       }
     },
-    [slug, token]
+    [slug, token, guestId]
   );
 
   const removeCartItem = useCallback(
     async (itemId: number) => {
+      if (!guestId) return;
       try {
         const res = await fetch(`/api/r/${slug}/session/${token}/cart/${itemId}`, {
           method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guestId }),
         });
         if (!res.ok) return;
         setCartItems((prev) => prev.filter((i) => i.id !== itemId));
@@ -111,19 +156,36 @@ export function OrderSessionProvider({
         // ignore
       }
     },
-    [slug, token]
+    [slug, token, guestId]
   );
+
+  const submitMyOrder = useCallback(async () => {
+    if (!guestId) return;
+    try {
+      const res = await fetch(`/api/r/${slug}/session/${token}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guestId }),
+      });
+      if (res.ok) await refreshCart();
+    } catch {
+      // ignore
+    }
+  }, [slug, token, guestId, refreshCart]);
 
   const value: OrderSessionContextValue = {
     slug,
     token,
     expiresAt,
     label,
+    guestId,
     cartItems,
+    orderedItems,
     setCartItems,
     addToCart,
     updateCartItemQuantity,
     removeCartItem,
+    submitMyOrder,
     refreshCart,
   };
 

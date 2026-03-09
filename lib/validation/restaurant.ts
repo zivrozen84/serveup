@@ -33,6 +33,16 @@ export const restaurantSchema = z.object({
   menuDisplayFormat: z.enum(["large", "small", "compact", "imageRight"]).default("large"),
   textSize: z.number().int().min(10).max(32).optional(),
   fontFamily: z.string().nullish(),
+  openTime: z
+    .union([z.literal(""), z.string().regex(/^\d{1,2}:\d{2}$/)])
+    .optional()
+    .nullable()
+    .transform((v) => (!v || v === "" ? null : v)),
+  closeTime: z
+    .union([z.literal(""), z.string().regex(/^\d{1,2}:\d{2}$/)])
+    .optional()
+    .nullable()
+    .transform((v) => (!v || v === "" ? null : v)),
 });
 
 export type RestaurantInput = z.infer<typeof restaurantSchema>;

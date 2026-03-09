@@ -69,10 +69,15 @@ model Restaurant {
   bottomNavColor        String?  // צבע מילוי עיגולים בתחתית (מסגרת שחורה קבועה)
   bottomNavIconColor String?  // צבע אייקונים בעיגולים בתחתית
   summaryCardColor    String?  // צבע כרטיסי פריטים בדף סיכום הזמנה
+  summaryTabPrimaryColor   String?  // לחיצה ראשי סיכום הזמנה – צבע כפתור פעיל (סל שלי)
+  summaryTabSecondaryColor String?  // לחיצה משני סיכום הזמנה – צבע כפתור פעיל (הוזמן)
+  summarySubmitButtonColor String?  // צבע כפתור "הזמן" (שליחת ההזמנה) – בסגנון וולט
   menuDisplayFormat  String   @default("large") // large | compact
   textSize           Int      @default(16)      // גודל טקסט בסיס (px)
   fontFamily         String?  // פונט (למשל Heebo, Assistant)
   city               String
+  openTime          String?  // שעות פתיחה ישראל HH:mm (למשל 09:00)
+  closeTime         String?  // שעות סגירה ישראל HH:mm (למשל 18:00)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   whatsappPhoneNumberId String?  // מזהה המספר ב-WhatsApp Cloud API – לקישור בוט למסעדה
@@ -108,9 +113,10 @@ model Dish {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 
-  category    Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  paramCategories DishParameterCategory[]
-  cartItems   CartItem[]
+  category            Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  paramCategories    DishParameterCategory[]
+  cartItems          CartItem[]
+  submissionItems    OrderSubmissionItem[]
 
   @@map("dishes")
 }
@@ -152,6 +158,7 @@ model Table {
   positionX    Float?   // מיקום על המפה (0-100)
   positionY    Float?
   shape        String?  // "circle" | "rectangle"
+  isOffline    Boolean  @default(false)  // שולחן מכובה – הלינק לא עובד, השולחן לא נמחק
   createdAt    DateTime @default(now())
 
   restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
@@ -171,24 +178,53 @@ model OrderSession {
   createdAt    DateTime  @default(now())
   expiresAt    DateTime  // תום תוקף (למשל 90 דקות מהפתיחה)
 
-  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  table      Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
-  cartItems  CartItem[]
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table        Table?           @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  cartItems    CartItem[]
+  submissions  OrderSubmission[]
 
   @@map("order_sessions")
 }
 
-// פריט בעגלה של סשן
+// פריט בעגלה של סשן – משויך לאורח (מכשיר) לפי guestId
 model CartItem {
-  id             Int    @id @default(autoincrement())
+  id             Int     @id @default(autoincrement())
   orderSessionId Int
+  guestId        String? // מזהה אורח (מכשיר) – כל מכשיר סל משלו (null = פריטים ישנים)
   dishId         Int
-  quantity       Int    @default(1)
-  priceCents     Int    // מחיר נשמר בזמן ההוספה
-  selections     Json?  // בחירות פרמטרים: [{ paramCategoryId, parameterId }] או מערך דומה
+  quantity       Int     @default(1)
+  priceCents     Int      // מחיר נשמר בזמן ההוספה
+  selections     Json?    // בחירות פרמטרים: [{ paramCategoryId, parameterId }] או מערך דומה
 
   orderSession OrderSession @relation(fields: [orderSessionId], references: [id], onDelete: Cascade)
   dish         Dish         @relation(fields: [dishId], references: [id], onDelete: Cascade)
 
   @@map("cart_items")
+}
+
+// הזמנה שנשלחה (הוזמן) – פריטים שעברו מ"סל שלי" לשליחה
+model OrderSubmission {
+  id             Int      @id @default(autoincrement())
+  orderSessionId Int
+  guestId        String
+  submittedAt    DateTime @default(now())
+
+  orderSession OrderSession        @relation(fields: [orderSessionId], references: [id], onDelete: Cascade)
+  items        OrderSubmissionItem[]
+
+  @@map("order_submissions")
+}
+
+model OrderSubmissionItem {
+  id               Int    @id @default(autoincrement())
+  orderSubmissionId Int
+  dishId           Int
+  quantity         Int    @default(1)
+  priceCents       Int
+  selections       Json?
+
+  orderSubmission OrderSubmission @relation(fields: [orderSubmissionId], references: [id], onDelete: Cascade)
+  dish            Dish            @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@map("order_submission_items")
 }

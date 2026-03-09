@@ -32,27 +32,37 @@ export default async function OrderTerminalPage({
 
   const session = await prisma.orderSession.findFirst({
     where: { restaurantId: restaurant.id, token },
-    include: {
-      cartItems: {
-        include: {
-          dish: { select: { id: true, title: true, imageUrl: true, priceCents: true } },
-        },
-      },
-    },
   });
 
   if (!session) notFound();
   if (session.status !== "active") notFound();
   if (new Date() > session.expiresAt) notFound();
 
-  const initialCart = session.cartItems.map((item) => ({
-    id: item.id,
-    dishId: item.dishId,
-    dish: item.dish,
-    quantity: item.quantity,
-    priceCents: item.priceCents,
-    selections: item.selections,
-  }));
+  if (session.tableId) {
+    const table = await prisma.table.findUnique({
+      where: { id: session.tableId },
+      select: { isOffline: true },
+    });
+    if (table?.isOffline) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
+          <div className="rounded-[2.5rem] bg-black p-2 shadow-2xl" style={{ width: 420, maxWidth: "100%" }}>
+            <div
+              className="relative overflow-hidden rounded-[2rem] flex flex-col bg-[#0a1628]"
+              style={{ minHeight: "min(90vh, 700px)", maxHeight: "min(90vh, 700px)" }}
+            >
+              <div className="h-6 bg-black flex justify-center shrink-0">
+                <div className="w-24 h-4 bg-stone-900 rounded-full" />
+              </div>
+              <div className="flex-1 flex items-center justify-center p-6 text-white">
+                <p className="text-center text-white/95 text-2xl md:text-3xl font-light tracking-wide">השולחן לא פעיל כרגע</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
 
   return (
     <OrderSessionProvider
@@ -60,7 +70,8 @@ export default async function OrderTerminalPage({
       token={token}
       expiresAt={session.expiresAt.toISOString()}
       label={session.label}
-      initialCart={initialCart}
+      initialCart={[]}
+      initialOrderedItems={[]}
     >
       <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900">
         <RestaurantMenu

@@ -32,6 +32,9 @@ interface MenuProps {
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     summaryCardColor?: string | null;
+  summaryTabPrimaryColor?: string | null;
+  summaryTabSecondaryColor?: string | null;
+  summarySubmitButtonColor?: string | null;
     menuDisplayFormat?: string;
     textSize?: number | null;
     fontFamily?: string | null;
@@ -84,6 +87,9 @@ interface RestaurantEditWithPreviewProps {
     bottomNavColor?: string | null;
     bottomNavIconColor?: string | null;
     summaryCardColor?: string | null;
+  summaryTabPrimaryColor?: string | null;
+  summaryTabSecondaryColor?: string | null;
+  summarySubmitButtonColor?: string | null;
     menuDisplayFormat?: string;
     isActive: boolean;
     logoUrl?: string | null;

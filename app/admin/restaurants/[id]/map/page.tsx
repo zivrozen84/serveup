@@ -20,6 +20,7 @@ export default async function RestaurantMapPage({
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { id },
+    select: { id: true, name: true, slug: true, primaryColor: true },
   });
   if (!restaurant) notFound();
 
@@ -40,6 +41,7 @@ export default async function RestaurantMapPage({
       <RestaurantMapEditor
         restaurantId={restaurant.id}
         restaurantName={restaurant.name}
+        restaurantSlug={restaurant.slug}
         primaryColor={restaurant.primaryColor}
       />
     </div>

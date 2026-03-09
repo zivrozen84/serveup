@@ -25,6 +25,9 @@ export default async function OrderSummaryRoute({
       frameUrl: true,
       cartBackgroundUrl: true,
       summaryCardColor: true,
+      summaryTabPrimaryColor: true,
+      summaryTabSecondaryColor: true,
+      summarySubmitButtonColor: true,
     },
   });
   if (!restaurant) notFound();
@@ -32,13 +35,6 @@ export default async function OrderSummaryRoute({
   const [session, menuData] = await Promise.all([
     prisma.orderSession.findFirst({
       where: { restaurantId: restaurant.id, token },
-      include: {
-        cartItems: {
-          include: {
-            dish: { select: { id: true, title: true, imageUrl: true, priceCents: true } },
-          },
-        },
-      },
     }),
     prisma.restaurant.findUnique({
       where: { id: restaurant.id },
@@ -67,15 +63,6 @@ export default async function OrderSummaryRoute({
   if (session.status !== "active") notFound();
   if (new Date() > session.expiresAt) notFound();
 
-  const initialCart = session.cartItems.map((item) => ({
-    id: item.id,
-    dishId: item.dishId,
-    dish: item.dish,
-    quantity: item.quantity,
-    priceCents: item.priceCents,
-    selections: item.selections,
-  }));
-
   const cartBackgroundUrl = (restaurant as { cartBackgroundUrl?: string | null }).cartBackgroundUrl ?? null;
   const phoneWidth = 420;
   const phoneContainerStyle = { width: phoneWidth, maxWidth: "100%" };
@@ -90,7 +77,8 @@ export default async function OrderSummaryRoute({
       token={token}
       expiresAt={session.expiresAt.toISOString()}
       label={session.label}
-      initialCart={initialCart}
+      initialCart={[]}
+      initialOrderedItems={[]}
     >
       <div className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-stone-900" dir="rtl">
         <div
@@ -107,21 +95,18 @@ export default async function OrderSummaryRoute({
             <div className="flex-1 min-h-0 relative flex flex-col">
               <div className="absolute inset-0 z-0" style={contentBgStyle} aria-hidden />
               <div className="relative z-10 flex flex-col flex-1 min-h-0 overflow-hidden">
-                <header className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10 bg-stone-900/80 backdrop-blur">
+                <header className="shrink-0 relative flex items-center justify-center p-4 border-b border-white/10 bg-stone-900/80 backdrop-blur min-h-[52px]">
                   <Link
                     href={`/r/${slug}/order/${token}`}
-                    className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-sm no-underline min-h-[44px]"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-sm no-underline"
                     aria-label="חזרה לתפריט"
                   >
                     <span className="text-lg leading-none" aria-hidden>←</span>
                     <span>חזרה</span>
                   </Link>
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-base font-bold text-white truncate">{restaurant.name}</h1>
-                    <p className="text-xs text-white/60">סיכום הזמנה</p>
-                  </div>
+                  <h1 className="text-xl font-bold text-white">סיכום הזמנה</h1>
                 </header>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <OrderSummaryPage
                     priceColor={(restaurant as { priceColor?: string | null }).priceColor ?? undefined}
                     primaryColor={restaurant.primaryColor ?? "#1c1917"}
@@ -130,6 +115,9 @@ export default async function OrderSummaryRoute({
                     cartColor={(restaurant as { cartColor?: string | null }).cartColor ?? restaurant.primaryColor ?? "#1c1917"}
                     cartTextColor={(restaurant as { cartTextColor?: string | null }).cartTextColor ?? "#ffffff"}
                     summaryCardColor={(restaurant as { summaryCardColor?: string | null }).summaryCardColor ?? undefined}
+                    summaryTabPrimaryColor={(restaurant as { summaryTabPrimaryColor?: string | null }).summaryTabPrimaryColor ?? undefined}
+                    summaryTabSecondaryColor={(restaurant as { summaryTabSecondaryColor?: string | null }).summaryTabSecondaryColor ?? undefined}
+                    summarySubmitButtonColor={(restaurant as { summarySubmitButtonColor?: string | null }).summarySubmitButtonColor ?? undefined}
                     menuDishes={menuDishes.map((d) => ({
                       id: d.id,
                       title: d.title,

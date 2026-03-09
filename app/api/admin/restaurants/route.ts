@@ -53,6 +53,9 @@ export async function POST(request: Request) {
       bottomNavColor: data.bottomNavColor ?? null,
       bottomNavIconColor: data.bottomNavIconColor ?? null,
       summaryCardColor: data.summaryCardColor ?? null,
+      summaryTabPrimaryColor: data.summaryTabPrimaryColor ?? null,
+      summaryTabSecondaryColor: data.summaryTabSecondaryColor ?? null,
+      summarySubmitButtonColor: data.summarySubmitButtonColor ?? null,
       menuDisplayFormat: data.menuDisplayFormat ?? "large",
       isActive: data.isActive ?? true,
       logoUrl: data.logoUrl ?? null,
@@ -62,6 +65,8 @@ export async function POST(request: Request) {
       frameVariants: data.frameVariants ?? null,
       textSize: data.textSize ?? 16,
       fontFamily: data.fontFamily ?? null,
+      openTime: data.openTime ?? null,
+      closeTime: data.closeTime ?? null,
     },
   });
   return NextResponse.json(restaurant);

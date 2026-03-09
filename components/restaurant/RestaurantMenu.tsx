@@ -276,6 +276,9 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
 
   const menuBgStyle = !hasBg ? { backgroundColor: "#1c1917" as const } : undefined;
 
+  const tableLabelText = orderSession?.label
+    ? (orderSession.label.startsWith("שולחן") ? orderSession.label : `שולחן ${orderSession.label}`)
+    : null;
   const content = (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col menu-scalable" dir="rtl" style={contentStyle}>
       <div className="flex-1 flex flex-col min-h-0">
@@ -337,8 +340,13 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 </button>
               ))}
             </div>
+            {tableLabelText && (
+              <p className="text-white text-sm font-medium text-left pt-1 pb-0.5" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>
+                {tableLabelText}
+              </p>
+            )}
           </div>
-          <div ref={scrollRef} className="pb-10 px-5 flex-1 pt-16">
+          <div ref={scrollRef} className="pb-10 px-5 flex-1 pt-20">
             {categories.map((cat) => (
               <section key={cat.id} data-cat={cat.id} className="pt-6">
                 <h2

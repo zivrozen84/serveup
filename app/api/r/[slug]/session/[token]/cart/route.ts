@@ -24,17 +24,19 @@ export async function POST(
   const session = await getSession(restaurant.id, token);
   if (!session) return NextResponse.json({ error: "Session invalid or expired" }, { status: 410 });
 
-  let body: { dishId: number; quantity?: number; priceCents: number; selections?: unknown } = {};
+  let body: { dishId: number; quantity?: number; priceCents: number; selections?: unknown; guestId?: string } = {};
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
-  const { dishId, quantity = 1, priceCents, selections } = body;
+  const { dishId, quantity = 1, priceCents, selections, guestId } = body;
   if (dishId == null || priceCents == null)
     return NextResponse.json({ error: "dishId and priceCents required" }, { status: 400 });
+  const guestIdVal = typeof guestId === "string" && guestId.trim() ? guestId.trim() : null;
+  if (!guestIdVal) return NextResponse.json({ error: "guestId required" }, { status: 400 });
 
-  const qty = Math.max(1, Math.min(99, Number(quantity)));
+  const qty = Math.max(1, Math.min(10, Number(quantity)));
   const dish = await prisma.dish.findFirst({
     where: { id: dishId },
     include: { category: { select: { restaurantId: true } } },
@@ -45,6 +47,7 @@ export async function POST(
   const item = await prisma.cartItem.create({
     data: {
       orderSessionId: session.id,
+      guestId: guestIdVal,
       dishId,
       quantity: qty,
       priceCents: Number(priceCents),
@@ -66,10 +69,14 @@ export async function POST(
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ slug: string; token: string }> }
 ) {
   const { slug, token } = await params;
+  const guestId = req.nextUrl.searchParams.get("guestId");
+  const guestIdVal = typeof guestId === "string" && guestId.trim() ? guestId.trim() : null;
+  if (!guestIdVal) return NextResponse.json({ error: "guestId required" }, { status: 400 });
+
   const restaurant = await prisma.restaurant.findUnique({
     where: { slug, isActive: true },
     select: { id: true },
@@ -79,21 +86,48 @@ export async function GET(
   const session = await getSession(restaurant.id, token);
   if (!session) return NextResponse.json({ error: "Session invalid or expired" }, { status: 410 });
 
-  const items = await prisma.cartItem.findMany({
-    where: { orderSessionId: session.id },
-    include: {
-      dish: { select: { id: true, title: true, imageUrl: true, priceCents: true } },
-    },
-  });
+  const [myCartItems, submissions] = await Promise.all([
+    prisma.cartItem.findMany({
+      where: { orderSessionId: session.id, guestId: guestIdVal },
+      include: {
+        dish: { select: { id: true, title: true, imageUrl: true, priceCents: true } },
+      },
+    }),
+    prisma.orderSubmission.findMany({
+      where: { orderSessionId: session.id },
+      include: {
+        items: {
+          include: {
+            dish: { select: { id: true, title: true, imageUrl: true, priceCents: true } },
+          },
+        },
+      },
+      orderBy: { submittedAt: "asc" },
+    }),
+  ]);
 
-  return NextResponse.json(
-    items.map((item) => ({
+  const orderedItems = submissions.flatMap((s) =>
+    s.items.map((it) => ({
+      id: it.id,
+      submissionId: s.id,
+      guestId: s.guestId,
+      dishId: it.dishId,
+      dish: it.dish,
+      quantity: it.quantity,
+      priceCents: it.priceCents,
+      selections: it.selections,
+    }))
+  );
+
+  return NextResponse.json({
+    myCart: myCartItems.map((item) => ({
       id: item.id,
       dishId: item.dishId,
       dish: item.dish,
       quantity: item.quantity,
       priceCents: item.priceCents,
       selections: item.selections,
-    }))
-  );
+    })),
+    orderedItems,
+  });
 }
