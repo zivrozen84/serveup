@@ -59,6 +59,40 @@ export async function PUT(
   }
 }
 
+/** עדכון שדה featured בלבד (כוכב מומלץ במנהל) */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const dishId = parseInt(id);
+  if (isNaN(dishId)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+
+  let body: { featured?: boolean };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "בקשה לא תקינה" }, { status: 400 });
+  }
+  if (typeof body.featured !== "boolean") {
+    return NextResponse.json({ error: "נדרש featured (בוליאני)" }, { status: 400 });
+  }
+
+  try {
+    const dish = await prisma.dish.update({
+      where: { id: dishId },
+      data: { featured: body.featured },
+    });
+    return NextResponse.json(dish);
+  } catch (e) {
+    logError("שגיאה בעדכון מנה (featured):", e);
+    return NextResponse.json({ error: "שגיאה בשמירה" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

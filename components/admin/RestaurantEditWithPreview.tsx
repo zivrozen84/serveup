@@ -49,6 +49,7 @@ interface MenuProps {
       description: string | null;
       allergens: string | null;
       priceCents: number;
+      featured?: boolean;
       paramCategories?: Array<{
         id: number;
         name: string;

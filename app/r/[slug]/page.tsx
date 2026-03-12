@@ -70,6 +70,7 @@ export default async function RestaurantMenuPage({
             description: d.description,
             allergens: d.allergens,
             priceCents: d.priceCents,
+            featured: (d as { featured?: boolean }).featured ?? false,
             paramCategories: (d as { paramCategories: Array<{ id: number; name: string; sortOrder: number; minSelections: number; maxSelections: number; parameters: Array<{ id: number; name: string; sortOrder: number; priceCents: number }> }> }).paramCategories ?? [],
           })),
         }))}

@@ -76,6 +76,7 @@ export default async function RestaurantEditPage({
         description: d.description,
         allergens: d.allergens,
         priceCents: d.priceCents,
+        featured: d.featured ?? false,
         paramCategories: (d as { paramCategories?: Array<{ id: number; name: string; sortOrder: number; minSelections: number; maxSelections: number; parameters: Array<{ id: number; name: string; sortOrder: number; priceCents: number }> }> }).paramCategories ?? [],
       })),
     })),

@@ -32,6 +32,7 @@ interface Dish {
   description: string | null;
   allergens: string | null;
   priceCents: number;
+  featured?: boolean;
   paramCategories?: ParamCategory[];
 }
 
@@ -308,6 +309,20 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   }, [orderSession, orderSlug, orderSessionToken, phoneLayout, forcePreview, showToast]);
 
   const handleChatClick = useCallback(() => setChatOpen(true), []);
+
+  const handleJumpToDish = useCallback(
+    (dishId: number) => {
+      setChatOpen(false);
+      const flat = categories.flatMap((c) => c.dishes);
+      const d = flat.find((x) => x.id === dishId);
+      if (d) {
+        setTimeout(() => {
+          setExpansionDish({ ...d, paramCategories: d.paramCategories ?? [] });
+        }, 120);
+      }
+    },
+    [categories]
+  );
 
   const content = (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col menu-scalable" dir="rtl" style={contentStyle}>
@@ -665,7 +680,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartCircleRef={cartCircleRef}
               />
             </div>
-            <ChatPopup open={chatOpen} onOpenChange={setChatOpen} embedInPhone restaurantSlug={restaurant.slug} />
+            <ChatPopup open={chatOpen} onOpenChange={setChatOpen} embedInPhone restaurantSlug={restaurant.slug} onJumpToDish={handleJumpToDish} />
             {expansionDish && canExpandDish && (
               <DishExpansionModal
                 open={!!expansionDish}
@@ -682,6 +697,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartBarControlsOpacity={cartBarControlsOpacity}
                 expansionBackdropOpacity={expansionBackdropOpacity}
                 isAdminMode={isAdminPreview}
+                onFeaturedChange={isAdminPreview ? (next) => setExpansionDish((prev) => (prev ? { ...prev, featured: next } : null)) : undefined}
                 embedInPhone
                 copiedParamSourceDishId={copiedParamSourceDishId}
                 onCopyParams={() => {
@@ -751,7 +767,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   cartCircleRef={cartCircleRef}
                 />
               </div>
-              <ChatPopup open={chatOpen} onOpenChange={setChatOpen} embedInPhone restaurantSlug={restaurant.slug} />
+              <ChatPopup open={chatOpen} onOpenChange={setChatOpen} embedInPhone restaurantSlug={restaurant.slug} onJumpToDish={handleJumpToDish} />
               {expansionDish && canExpandDish && (
                 <DishExpansionModal
                   open={!!expansionDish}
@@ -768,6 +784,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 cartBarControlsOpacity={cartBarControlsOpacity}
                 expansionBackdropOpacity={expansionBackdropOpacity}
                 isAdminMode={isAdminPreview}
+                onFeaturedChange={isAdminPreview ? (next) => setExpansionDish((prev) => (prev ? { ...prev, featured: next } : null)) : undefined}
                 embedInPhone
                 copiedParamSourceDishId={copiedParamSourceDishId}
                 onCopyParams={() => {

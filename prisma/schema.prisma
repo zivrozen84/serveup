@@ -115,6 +115,7 @@ model Dish {
   allergens   String?
   priceCents  Int      @default(0)
   sortOrder   Int      @default(0)
+  featured    Boolean  @default(false) // recommended by advisor when starred in admin
   createdAt   DateTime @default(now())
 
   category            Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)

@@ -23,6 +23,7 @@ export interface DishForExpansion {
   imageUrl: string | null;
   description: string | null;
   priceCents: number;
+  featured?: boolean;
   paramCategories: ParamCategory[];
 }
 
@@ -63,6 +64,8 @@ interface DishExpansionModalProps {
   initialSelections?: Record<number, number[]>;
   onUpdate?: (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => void;
   onRemove?: () => void;
+  /** עדכון כוכב מומלץ (מנהל) */
+  onFeaturedChange?: (featured: boolean) => void;
 }
 
 export function DishExpansionModal({
@@ -93,6 +96,7 @@ export function DishExpansionModal({
   initialSelections = {},
   onUpdate,
   onRemove,
+  onFeaturedChange,
 }: DishExpansionModalProps) {
   const cartColor = cartColorProp || primaryColor;
   const cartTextColor = cartTextColorProp || "#ffffff";
@@ -120,11 +124,14 @@ export function DishExpansionModal({
   const [addButtonShrink, setAddButtonShrink] = useState(false);
   const [cartBarGlow, setCartBarGlow] = useState(false);
   const [highlightMissingCatId, setHighlightMissingCatId] = useState<number | null>(null);
+  const [featured, setFeatured] = useState(dish.featured ?? false);
+  const [featuredSaving, setFeaturedSaving] = useState(false);
 
   // Sync state when modal opens only; do not depend on initialSelections/initialQuantity (unstable refs cause infinite loop)
   useEffect(() => {
     if (!open) return;
     setIsFadingOut(false);
+    setFeatured(dish.featured ?? false);
     setParamCategories(dish.paramCategories);
     if (isEditMode) {
       setQuantity(initialQuantity);
@@ -328,11 +335,41 @@ export function DishExpansionModal({
           className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4"
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehaviorY: "contain" }}
         >
-        <div>
-          <h2 className="text-xl font-bold" style={{ color: textColor }}>{dish.title}</h2>
-          {dish.description && (
-            <p className="text-sm mt-2 leading-relaxed" style={{ color: descriptionColor }}>{dish.description}</p>
+        <div className="flex items-start gap-2">
+          {isAdminMode && onFeaturedChange && (
+            <button
+              type="button"
+              disabled={featuredSaving}
+              onClick={async () => {
+                const next = !featured;
+                setFeaturedSaving(true);
+                try {
+                  const res = await fetch(`/api/admin/dishes/${dish.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ featured: next }),
+                  });
+                  if (res.ok) {
+                    setFeatured(next);
+                    onFeaturedChange(next);
+                  }
+                } finally {
+                  setFeaturedSaving(false);
+                }
+              }}
+              className="shrink-0 p-1.5 rounded-lg border border-white/30 hover:bg-white/10 disabled:opacity-50 transition-colors"
+              title={featured ? "הסר מהמומלצים" : "המלץ על מנה זו"}
+              aria-label={featured ? "הסר כוכב" : "סמן כוכב"}
+            >
+              <span className="text-lg leading-none block">{featured ? "★" : "☆"}</span>
+            </button>
           )}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-bold" style={{ color: textColor }}>{dish.title}</h2>
+            {dish.description && (
+              <p className="text-sm mt-2 leading-relaxed" style={{ color: descriptionColor }}>{dish.description}</p>
+            )}
+          </div>
         </div>
 
         {isAdminMode && (

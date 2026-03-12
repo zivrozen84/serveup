@@ -193,3 +193,16 @@ html:has([data-admin]) body {
 .animate-waiter-call {
   animation: waiter-call-pulse 1.2s ease-in-out infinite;
 }
+
+/* כפתור עבור בצ'אט – הופעה ב־fade */
+@keyframes chat-jump-btn-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-chat-jump-fade {
+  animation: chat-jump-btn-fade 0.5s ease-out forwards;
+}
