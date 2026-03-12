@@ -587,19 +587,6 @@ export function DishExpansionModal({
               className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white/15"
               style={{ opacity: controlsOpacity }}
             >
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                onPointerDown={() => setQuantityPressed("minus")}
-                onPointerUp={() => setQuantityPressed(null)}
-                onPointerLeave={() => setQuantityPressed(null)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold transition-transform duration-150 select-none active:outline-none ${
-                  quantityPressed === "minus" ? "scale-110" : ""
-                }`}
-                style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
-              >
-                <span className="text-2xl leading-none inline-flex items-center justify-center w-full h-full -translate-y-0.5">−</span>
-              </button>
               <span className="w-8 text-center font-bold text-white text-lg">{quantity}</span>
               <button
                 type="button"
@@ -623,16 +610,18 @@ export function DishExpansionModal({
             </span>
             {isEditMode ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRemove?.();
-                    onOpenChange(false);
-                  }}
-                  className="py-3 px-4 rounded-xl font-bold border-2 border-red-500/80 text-red-400 hover:bg-red-500/20 transition-colors"
-                >
-                  מחק פריט
-                </button>
+                {onRemove != null && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemove();
+                      onOpenChange(false);
+                    }}
+                    className="py-3 px-4 rounded-xl font-bold border-2 border-red-500/80 text-red-400 hover:bg-red-500/20 transition-colors"
+                  >
+                    מחק פריט
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -690,7 +679,7 @@ export function DishExpansionModal({
                   }
                   if (firstMissingRequiredCatId == null && onAddToCart) {
                     const sourceRect = dishImageRef.current?.getBoundingClientRect();
-                    const doAdd = () => {
+                    const doAdd = async () => {
                       const selArray: Array<{ paramCategoryId: number; parameterId: number; paramCategoryName?: string; parameterName?: string }> = [];
                       paramCategories.forEach((cat) => {
                         (selections[cat.id] ?? []).forEach((paramId) => {
@@ -703,12 +692,14 @@ export function DishExpansionModal({
                           });
                         });
                       });
-                      onAddToCart({
-                        dishId: dish.id,
-                        quantity,
-                        priceCents: totalPriceCents,
-                        selections: selArray.length ? selArray : undefined,
-                      });
+                      await Promise.resolve(
+                        onAddToCart({
+                          dishId: dish.id,
+                          quantity,
+                          priceCents: totalPriceCents,
+                          selections: selArray.length ? selArray : undefined,
+                        })
+                      );
                       onOpenChange(false);
                     };
                     if (onRequestAddToCart && sourceRect) {
@@ -719,10 +710,10 @@ export function DishExpansionModal({
                         } catch {
                           /* נפל – מוסיפים בלי אנימציה */
                         }
-                        doAdd();
+                        await doAdd();
                       }, FADE_OUT_MS);
                     } else {
-                      doAdd();
+                      await doAdd();
                     }
                   }
                 }}

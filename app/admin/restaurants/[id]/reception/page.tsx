@@ -52,7 +52,7 @@ export default async function ReceptionPage({
       tables={tables}
       initialDontNotify={restaurant.receptionDontNotifyReady ?? false}
       initialAutoDeleteMinutes={restaurant.receptionAutoDeleteMinutes ?? 30}
-      initialAlertAfterMinutes={restaurant.receptionAlertAfterMinutes ?? 10}
+      initialAlertAfterMinutes={restaurant.receptionAlertAfterMinutes ?? null}
       initialWaiterPopupDisabled={restaurant.receptionWaiterPopupDisabled ?? false}
     />
   );

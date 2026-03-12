@@ -157,13 +157,13 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
             transition: "transform 0.15s ease-out, filter 0.15s ease-out",
           }}
           onPointerDown={(e) => {
+            e.stopPropagation();
             if (isPeek) {
-              e.stopPropagation();
               touchStartedInPeekRef.current = true;
               requestAnimationFrame(() => setOffsetY(0));
               return;
             }
-            e.stopPropagation();
+            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
             setPressedCircle("bell");
           }}
           onPointerUp={(e) => {
@@ -234,13 +234,14 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
               transition: "transform 0.15s ease-out, filter 0.15s ease-out",
             }}
             onPointerDown={(e) => {
+              e.stopPropagation();
               if (isPeek) {
-                e.stopPropagation();
                 touchStartedInPeekRef.current = true;
                 requestAnimationFrame(() => setOffsetY(0));
                 if (onCartClick) onCartClick();
                 return;
               }
+              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
               setPressedCircle("cart");
             }}
             onPointerUp={(e) => {
@@ -296,12 +297,13 @@ export function BottomNavBar({ fillColor, iconColor, visible = true, onBellClick
             transition: "transform 0.15s ease-out, filter 0.15s ease-out",
           }}
           onPointerDown={(e) => {
+            e.stopPropagation();
             if (isPeek) {
-              e.stopPropagation();
               touchStartedInPeekRef.current = true;
               requestAnimationFrame(() => setOffsetY(0));
               return;
             }
+            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
             setPressedCircle("chat");
           }}
           onPointerUp={(e) => {

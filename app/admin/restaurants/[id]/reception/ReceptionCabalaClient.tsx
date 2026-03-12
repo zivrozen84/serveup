@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Check, Clock, Settings, X } from "lucide-react";
+import { Bell, Check, Clock, Printer, Settings, X } from "lucide-react";
 import { ReceptionMapView } from "@/components/admin/ReceptionMapView";
 
 let bellAudioContextRef: AudioContext | null = null;
@@ -102,6 +102,7 @@ type OrderItem = {
   quantity: number;
   priceCents: number;
   selections: unknown;
+  status?: string;
 };
 
 type SubmissionDto = {
@@ -148,8 +149,9 @@ function buildBonGroups(orders: SubmissionDto[]): BonGroup[] {
 
   for (const sub of sorted) {
     const tableId = sub.session.tableId;
+    const trimmed = sub.session.table?.label?.trim();
     const tableLabel =
-      sub.session.table?.label ?? sub.session.table?.tableNumber ?? sub.session.label ?? "—";
+      (trimmed && trimmed !== "שולחן" ? trimmed : (sub.session.table?.tableNumber != null ? String(sub.session.table.tableNumber) : null)) ?? sub.session.label ?? "—";
     const subTime = new Date(sub.submittedAt).getTime();
 
     const last = groups[groups.length - 1];
@@ -185,6 +187,11 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatPrice(cents: number): string {
+  const n = cents / 100;
+  return n % 1 === 0 ? n.toString() : n.toFixed(2);
+}
+
 /** זמן שעבר מאז submittedAt בפורמט M:SS, מתעדכן כל שניה */
 function useElapsedDisplay(submittedAt: string): { elapsedSec: number; display: string } {
   const submittedMs = useMemo(() => new Date(submittedAt).getTime(), [submittedAt]);
@@ -214,7 +221,7 @@ function BonTimer({
   alertAfterMinutes?: number | null;
 }) {
   const { elapsedSec, display } = useElapsedDisplay(submittedAt);
-  const thresholdSec = (alertAfterMinutes != null ? alertAfterMinutes : 10) * 60;
+  const thresholdSec = alertAfterMinutes != null && alertAfterMinutes > 0 ? alertAfterMinutes * 60 : Infinity;
   const isAlert = elapsedSec > thresholdSec;
   return (
     <span
@@ -226,6 +233,24 @@ function BonTimer({
   );
 }
 
+/** טיימר ליד מנה: לא מוכן = רץ, מוכן = זמן קפוא (submittedAt→readyAt), בוטל = בלי טיימר */
+function ItemTimer({ status, submittedAt, readyAt }: { status: string; submittedAt?: string; readyAt?: string | null }) {
+  if (status === "canceled") return null;
+  if (status === "ready" && submittedAt && readyAt) {
+    const sub = new Date(submittedAt).getTime();
+    const ready = new Date(readyAt).getTime();
+    const sec = Math.floor((ready - sub) / 1000);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    const display = `${m}:${s.toString().padStart(2, "0")}`;
+    return <span className="text-white/70 text-[10px] tabular-nums" title={`זמן הכנה: ${display}`}>{display}</span>;
+  }
+  if (status === "ready") return null;
+  if (!submittedAt) return null;
+  const { display } = useElapsedDisplay(submittedAt);
+  return <span className="text-white/70 text-[10px] tabular-nums" title={`זמן מההזמנה: ${display}`}>{display}</span>;
+}
+
 interface ReceptionCabalaClientProps {
   restaurantId: number;
   restaurantName: string;
@@ -233,7 +258,7 @@ interface ReceptionCabalaClientProps {
   tables: Table[];
   initialDontNotify: boolean;
   initialAutoDeleteMinutes: number;
-  initialAlertAfterMinutes: number;
+  initialAlertAfterMinutes: number | null;
   initialWaiterPopupDisabled: boolean;
 }
 
@@ -254,12 +279,45 @@ export function ReceptionCabalaClient({
   const [alertAfterMinutes, setAlertAfterMinutes] = useState(initialAlertAfterMinutes);
   const [waiterPopupDisabled, setWaiterPopupDisabled] = useState(initialWaiterPopupDisabled);
   const [callingWaiterTables, setCallingWaiterTables] = useState<Array<{ tableId: number; label: string }>>([]);
+  type TableSummaryRow = {
+    tableId: number;
+    tableLabel: string;
+    items: { itemId: number; dishTitle: string; quantity: number; priceCents: number; lineTotalCents: number; status: string; selections?: unknown; submittedAt?: string; readyAt?: string | null }[];
+    totalCents: number;
+  };
+  const [tableSummary, setTableSummary] = useState<TableSummaryRow[]>([]);
+  const [closeTableConfirmTableId, setCloseTableConfirmTableId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [markingGroupIds, setMarkingGroupIds] = useState<Set<number>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const TEXT_SCALE_KEY = `serveup_reception_textScale_${restaurantId}`;
+  const [textScale, setTextScale] = useState(1);
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem(TEXT_SCALE_KEY);
+      if (s != null) {
+        const n = parseFloat(s);
+        if (Number.isFinite(n) && n >= 0.8 && n <= 1.4) setTextScale(n);
+      }
+    } catch {
+      // ignore
+    }
+  }, [TEXT_SCALE_KEY]);
+  const handleTextScaleChange = useCallback(
+    (value: number) => {
+      setTextScale(value);
+      try {
+        localStorage.setItem(TEXT_SCALE_KEY, String(value));
+      } catch {
+        // ignore
+      }
+    },
+    [TEXT_SCALE_KEY]
+  );
   const prevOrderCountRef = useRef<number>(0);
   const prevSubmissionIdsRef = useRef<Set<number>>(new Set());
+  const prevOrderTableIdsRef = useRef<Set<number>>(new Set());
   const prevCallingTableIdsRef = useRef<Set<number>>(new Set());
   const isFirstCallingLoadRef = useRef(true);
   const isFirstLoadRef = useRef(true);
@@ -283,18 +341,6 @@ export function ReceptionCabalaClient({
   }, []);
   const alertSoundPlayedRef = useRef<Set<number>>(new Set());
   const [tick, setTick] = useState(0);
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const [settingsPopoverRect, setSettingsPopoverRect] = useState<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
-    if (!settingsOpen || !settingsButtonRef.current) {
-      setSettingsPopoverRect(null);
-      return;
-    }
-    const rect = settingsButtonRef.current.getBoundingClientRect();
-    setSettingsPopoverRect({ top: rect.bottom + 6, left: rect.left });
-  }, [settingsOpen]);
-
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
@@ -335,7 +381,7 @@ export function ReceptionCabalaClient({
       const data = await res.json();
       setDontNotify(data.receptionDontNotifyReady ?? false);
       setAutoDeleteMinutes(data.receptionAutoDeleteMinutes ?? 30);
-      setAlertAfterMinutes(data.receptionAlertAfterMinutes ?? 10);
+      setAlertAfterMinutes(data.receptionAlertAfterMinutes !== undefined ? data.receptionAlertAfterMinutes : 10);
       setWaiterPopupDisabled(data.receptionWaiterPopupDisabled ?? false);
     }
   }, [restaurantId]);
@@ -376,6 +422,37 @@ export function ReceptionCabalaClient({
     const t = setInterval(fetchCallingWaiter, POLL_MS);
     return () => clearInterval(t);
   }, [fetchCallingWaiter]);
+
+  const fetchTableSummary = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/admin/restaurants/${restaurantId}/reception/table-summary`,
+        { credentials: "include" }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTableSummary(data.tables ?? []);
+      }
+    } catch {
+      // ignore
+    }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    fetchTableSummary();
+    const t = setInterval(fetchTableSummary, POLL_MS);
+    return () => clearInterval(t);
+  }, [fetchTableSummary]);
+
+  useEffect(() => {
+    const tableIds = new Set(
+      orders.flatMap((o) => (o.session.tableId != null ? [o.session.tableId] : []))
+    );
+    if (prevOrderTableIdsRef.current.size > 0 && tableIds.size > prevOrderTableIdsRef.current.size) {
+      fetchTableSummary();
+    }
+    prevOrderTableIdsRef.current = tableIds;
+  }, [orders, fetchTableSummary]);
 
   useEffect(() => {
     fetchSettings();
@@ -431,7 +508,10 @@ export function ReceptionCabalaClient({
         `/api/admin/restaurants/${restaurantId}/reception/orders/${submissionId}`,
         { method: "PATCH", credentials: "include" }
       );
-      if (res.ok) await fetchOrders();
+      if (res.ok) {
+        await fetchOrders();
+        await fetchTableSummary();
+      }
     } finally {
       setMarkingId(null);
     }
@@ -450,6 +530,7 @@ export function ReceptionCabalaClient({
         )
       );
       await fetchOrders();
+      await fetchTableSummary();
     } finally {
       setMarkingGroupIds((prev) => {
         const next = new Set(prev);
@@ -498,7 +579,7 @@ export function ReceptionCabalaClient({
   };
 
   const handleAlertAfterChange = async (val: number) => {
-    const next = Math.max(1, Math.min(120, val));
+    const next = val >= 1 ? Math.max(1, Math.min(120, val)) : null;
     setAlertAfterMinutes(next);
     try {
       await fetch(`/api/admin/restaurants/${restaurantId}/reception/settings`, {
@@ -550,6 +631,74 @@ export function ReceptionCabalaClient({
     [restaurantId, fetchCallingWaiter]
   );
 
+  const handleCancelItem = useCallback(
+    async (itemId: number) => {
+      try {
+        const res = await fetch(
+          `/api/admin/restaurants/${restaurantId}/reception/items/${itemId}/cancel`,
+          { method: "PATCH", credentials: "include" }
+        );
+        if (res.ok) {
+          await fetchTableSummary();
+          await fetchOrders();
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [restaurantId, fetchTableSummary, fetchOrders]
+  );
+
+  const handleMarkItemReady = useCallback(
+    async (itemId: number) => {
+      try {
+        const res = await fetch(
+          `/api/admin/restaurants/${restaurantId}/reception/items/${itemId}/ready`,
+          { method: "PATCH", credentials: "include" }
+        );
+        if (res.ok) {
+          await fetchTableSummary();
+          await fetchOrders();
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [restaurantId, fetchTableSummary, fetchOrders]
+  );
+
+  const handleCloseTableClick = useCallback((tableId: number) => {
+    setCloseTableConfirmTableId(tableId);
+  }, []);
+
+  const handleConfirmCloseTable = useCallback(
+    async () => {
+      const tableId = closeTableConfirmTableId;
+      if (tableId == null) return;
+      setCloseTableConfirmTableId(null);
+      try {
+        const res = await fetch(
+          `/api/admin/restaurants/${restaurantId}/reception/close-table`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tableId }),
+            credentials: "include",
+          }
+        );
+        if (res.ok) {
+          setTableSummary((prev) => prev.filter((r) => r.tableId !== tableId));
+          setSelectedTableId((id) => (id === tableId ? null : id));
+          await fetchTableSummary();
+          await fetchOrders();
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [restaurantId, closeTableConfirmTableId, fetchTableSummary, fetchOrders]
+  );
+
   const ordersAlertTableIds = useMemo(() => {
     if (alertThresholdSec == null) return new Set<number>();
     const set = new Set<number>();
@@ -567,8 +716,6 @@ export function ReceptionCabalaClient({
     ? (tables.find((t) => t.id === selectedTableId)?.label ?? tables.find((t) => t.id === selectedTableId)?.tableNumber ?? selectedTableId)
     : null;
 
-  const tableOrders = selectedTableId != null ? filteredOrders : [];
-
   const isOrderAlert = (sub: SubmissionDto) => {
     if (alertThresholdSec == null) return false;
     const elapsed = Math.floor((Date.now() - new Date(sub.submittedAt).getTime()) / 1000);
@@ -576,12 +723,20 @@ export function ReceptionCabalaClient({
   };
 
   return (
-    <div className="flex flex-col min-h-0 relative gap-2">
+    <div className="flex flex-col min-h-screen min-h-0 relative gap-2 overflow-y-auto overflow-x-hidden scrollbar-dark">
+      <div
+        className="flex flex-col gap-2 flex-1 min-h-0"
+        style={{
+          width: `${100 / textScale}%`,
+          minHeight: `${100 / textScale}%`,
+          transform: `scale(${textScale})`,
+          transformOrigin: "top right",
+        }}
+      >
       {/* עליון: הגדרות ימין, כל ההזמנות */}
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="relative order-1">
           <button
-            ref={settingsButtonRef}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -603,35 +758,30 @@ export function ReceptionCabalaClient({
                   onClick={() => setSettingsOpen(false)}
                 />
                 <div
-                  className="fixed z-[101] min-w-[240px] rounded-lg border border-white/10 bg-[#0e1118] shadow-xl p-3"
-                  style={
-                    settingsPopoverRect
-                      ? { top: settingsPopoverRect.top, left: settingsPopoverRect.left }
-                      : undefined
-                  }
+                  className="fixed left-1/2 top-1/2 z-[101] min-w-[280px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#0e1118] shadow-2xl p-4"
                   role="dialog"
                   aria-label="הגדרות קבלה"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-white text-sm font-medium">הגדרות</span>
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                    <span className="text-white font-medium">הגדרות</span>
                     <button
                       type="button"
                       onClick={() => setSettingsOpen(false)}
-                      className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10"
+                      className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                       aria-label="סגור"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-white/80 text-xs">
+                  <div className="space-y-4">
+                    <label className="flex flex-wrap items-center gap-2 cursor-pointer text-white/90 text-sm">
                       <input
                         type="checkbox"
                         checked={dontNotify}
                         onChange={handleToggleDontNotify}
-                        className="w-3.5 h-3.5 rounded border-white/30"
+                        className="w-4 h-4 rounded border-white/30 accent-emerald-500"
                       />
-                      <span>אל תודיע מוכן, מחק אחרי</span>
+                      <span>הודעה מוכן אוטומטית אחרי</span>
                       <input
                         type="number"
                         min={1}
@@ -639,33 +789,58 @@ export function ReceptionCabalaClient({
                         value={autoDeleteMinutes}
                         onChange={(e) => handleAutoDeleteChange(parseInt(e.target.value, 10) || 30)}
                         disabled={!dontNotify}
-                        className="w-10 px-1 py-0.5 rounded bg-white/10 text-white text-center border-0 text-xs disabled:opacity-50"
+                        className="w-12 px-2 py-1 rounded-md bg-white/10 text-white text-center border border-white/10 text-sm disabled:opacity-50"
                       />
-                      <span>דק׳</span>
+                      <span className="text-white/70">דקות.</span>
                     </label>
-                    <label className="flex items-center gap-2 text-white/80 text-xs">
-                      <span>התראת זמן</span>
+                    <label className="flex flex-wrap items-center gap-2 text-white/90 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={alertAfterMinutes != null && alertAfterMinutes > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) handleAlertAfterChange(alertAfterMinutes || 10);
+                          else handleAlertAfterChange(0);
+                        }}
+                        className="w-4 h-4 rounded border-white/30 accent-amber-500"
+                      />
+                      <span>התראת אזהרה אחרי</span>
                       <input
                         type="number"
                         min={1}
                         max={120}
-                        value={alertAfterMinutes}
+                        value={alertAfterMinutes ?? 10}
                         onChange={(e) => handleAlertAfterChange(parseInt(e.target.value, 10) || 10)}
-                        className="w-10 px-1 py-0.5 rounded bg-white/10 text-white text-center border-0 text-xs"
+                        disabled={alertAfterMinutes == null || alertAfterMinutes === 0}
+                        className="w-12 px-2 py-1 rounded-md bg-white/10 text-white text-center border border-white/10 text-sm disabled:opacity-50"
                       />
-                      <span>דק׳</span>
+                      <span className="text-white/70">דקות.</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-white/80 text-xs">
+                    <label className="flex items-center gap-2 cursor-pointer text-white/90 text-sm">
                       <input
                         type="checkbox"
                         checked={waiterPopupDisabled}
                         onChange={handleToggleWaiterPopupDisabled}
-                        className="w-3.5 h-3.5 rounded border-white/30"
+                        className="w-4 h-4 rounded border-white/30 accent-emerald-500"
                       />
-                      <span>אל תציג פופאפ קריאה למלצר (רק אפקט שולחן + צליל)</span>
+                      <span>הסתרת הודעת &quot;קרא למלצר&quot;</span>
                     </label>
+                    <div className="pt-3 border-t border-white/10">
+                      <p className="text-white/80 text-sm mb-2">גודל טקסט בעמוד</p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-white/60 text-xs tabular-nums w-8">80%</span>
+                        <input
+                          type="range"
+                          min={0.8}
+                          max={1.4}
+                          step={0.05}
+                          value={textScale}
+                          onChange={(e) => handleTextScaleChange(parseFloat(e.target.value))}
+                          className="flex-1 h-2 rounded-full bg-white/20 appearance-none accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow"
+                        />
+                        <span className="text-white/60 text-xs tabular-nums w-10">{Math.round(textScale * 100)}%</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-white/40 text-[10px] mt-2">נשמר אוטומטית</p>
                 </div>
               </>,
               document.body
@@ -677,14 +852,25 @@ export function ReceptionCabalaClient({
         </h2>
       </div>
 
-      {/* בונים */}
-      <div className="min-w-0 flex-1 flex flex-col min-h-0">
+      {/* הזמנות + מפה צמודים – בלי רווח ביניהם */}
+      <div className="flex flex-col gap-0 shrink-0">
+      {/* בונים – הזמנות פעילות בקנה 115% */}
+      <div className="min-w-0 flex flex-col">
         {loading ? (
           <p className="text-white/50 text-xs">טוען...</p>
         ) : bonGroupsLeftToRight.length === 0 ? (
           <p className="text-white/50 text-xs">אין הזמנות ממתינות</p>
         ) : (
-          <div className="flex flex-row flex-wrap gap-2 overflow-x-auto overflow-y-auto pb-1 scrollbar-hide min-w-0 flex-1 min-h-[260px] content-start">
+          <div className="flex flex-row flex-wrap gap-2 pb-1 min-w-0 content-start">
+            <div
+              className="flex flex-row flex-wrap gap-2 content-start"
+              style={{
+                width: `${100 / 1.15}%`,
+                minHeight: `${100 / 1.15}%`,
+                transform: "scale(1.15)",
+                transformOrigin: "top right",
+              }}
+            >
             {bonGroupsLeftToRight.map((group) => {
               const firstSub = group.submissions[0];
               const alert = group.submissions.some(isOrderAlert);
@@ -705,31 +891,59 @@ export function ReceptionCabalaClient({
                     </span>
                     <BonTimer submittedAt={firstSub.submittedAt} alertAfterMinutes={alertAfterMinutes} />
                   </div>
-                  <p className="text-white/40 text-[10px]">{formatTime(firstSub.submittedAt)}</p>
                   <div className="flex flex-col gap-2 flex-1 min-w-0">
                     {group.submissions.map((sub) => {
                       const subAlert = isOrderAlert(sub);
                       return (
                         <div key={sub.id} className="flex flex-col gap-0.5">
-                          <div className="flex items-center justify-end gap-1.5 min-w-0">
-                            <span
-                              className={`text-[10px] tabular-nums ${
-                                subAlert ? "text-red-400" : "text-white/40"
-                              }`}
-                            >
-                              <BonTimer submittedAt={sub.submittedAt} alertAfterMinutes={alertAfterMinutes} />
-                            </span>
-                            <span className="text-white/35 text-[10px]">{formatTime(sub.submittedAt)}</span>
-                          </div>
-                          <ul className="text-white/90 text-xs space-y-1 break-words">
-                            {sub.items.map((i) => (
-                              <li key={i.id}>
-                                <span>{i.quantity} × {i.dishTitle}</span>
-                                {formatSelections(i.selections) && (
-                                  <p className="text-white/60 text-xs mt-0.5 pr-1">{formatSelections(i.selections)}</p>
-                                )}
-                              </li>
-                            ))}
+                          <ul className="text-white/90 text-xs break-words divide-y divide-white/[0.08]">
+                            {sub.items
+                              .filter((i) => i.status === "pending")
+                              .flatMap((i) =>
+                                Array.from({ length: i.quantity }, (_, idx) => (
+                                  <li key={`${i.id}-${idx}`} className="py-1.5 first:pt-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span>{i.dishTitle}</span>
+                                      <span
+                                        className={`text-[10px] tabular-nums shrink-0 ${
+                                          subAlert ? "text-red-400" : "text-white/50"
+                                        }`}
+                                      >
+                                        <BonTimer submittedAt={sub.submittedAt} alertAfterMinutes={alertAfterMinutes} />
+                                      </span>
+                                      <div className="ms-auto flex items-center gap-0.5 shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkItemReady(i.id);
+                                          }}
+                                          className="p-0.5 rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 shrink-0"
+                                          aria-label="מוכן"
+                                          title="מוכן"
+                                        >
+                                          <Check className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCancelItem(i.id);
+                                          }}
+                                          className="p-0.5 rounded text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0"
+                                          aria-label="בוטל"
+                                          title="בוטל"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {formatSelections(i.selections) && (
+                                      <p className="text-white/60 text-xs mt-0.5 pr-1">{formatSelections(i.selections)}</p>
+                                    )}
+                                  </li>
+                                ))
+                              )}
                           </ul>
                         </div>
                       );
@@ -754,22 +968,160 @@ export function ReceptionCabalaClient({
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>
 
-      {/* מפת שולחנות – תמיד למטה */}
-      <div className="shrink-0 w-full max-w-2xl self-center">
-        <ReceptionMapView
-          tables={tables}
-          primaryColor={primaryColor}
-          selectedTableId={selectedTableId}
-          onSelectTable={setSelectedTableId}
-          ordersCountByTableId={ordersCountByTableId}
-          ordersAlertTableIds={ordersAlertTableIds}
-          ordersCallingWaiterTableIds={new Set(callingWaiterTables.map((t) => t.tableId))}
-        />
+      {/* מפת שולחנות – צמודה מתחת להזמנות; הרווח מתחתיה מצומצם */}
+      <div className="shrink-0 w-full max-w-2xl self-center pt-1" style={{ transform: "scale(0.48)", transformOrigin: "top center", marginBottom: "calc(-1 * min(42vh, 340px))" }}>
+          <ReceptionMapView
+            tables={tables}
+            primaryColor={primaryColor}
+            selectedTableId={selectedTableId}
+            onSelectTable={setSelectedTableId}
+            ordersCountByTableId={ordersCountByTableId}
+            activeTableIds={new Set(tableSummary.map((r) => r.tableId))}
+            ordersAlertTableIds={ordersAlertTableIds}
+            ordersCallingWaiterTableIds={new Set(callingWaiterTables.map((t) => t.tableId))}
+          />
       </div>
+      </div>
+
+      {/* הזמנה ספציפית – רווח נמוך מתחת למפה */}
+      {selectedTableId != null && (
+        <div className="shrink-0 self-center mt-0.5" style={{ transform: "scale(1.316)", transformOrigin: "top center" }}>
+        <div className="rounded-lg border border-white/10 bg-[#1a1d24] px-2.5 py-2 w-fit max-w-full">
+          <div className="flex items-center gap-2 mb-1.5">
+            <h2 className="text-lg font-semibold text-white">שולחן {selectedTableLabel}</h2>
+            <button
+              type="button"
+              onClick={() => setSelectedTableId(null)}
+              className="text-xs text-white/50 hover:text-white shrink-0"
+            >
+              סגור
+            </button>
+          </div>
+          {callingWaiterTables.some((ct) => ct.tableId === selectedTableId) && (
+            <div className="flex justify-end mb-2" dir="rtl">
+              <div className="rounded-lg border border-amber-400 bg-amber-500 shadow shadow-amber-400/30 px-2 py-1.5 flex flex-col gap-1 w-max max-w-[140px]">
+                <div className="flex items-center gap-1 text-[#1a1d24] font-bold text-xs">
+                  <Bell className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+                  <span>קרא למלצר</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearCallingWaiter(selectedTableId)}
+                  className="py-1 px-2 rounded text-[11px] font-medium text-amber-900 bg-amber-200 hover:bg-amber-300 border border-amber-600/40 transition-colors w-full"
+                >
+                  קיבלתי
+                </button>
+              </div>
+            </div>
+          )}
+          {(() => {
+            const tableRow = tableSummary.find((r) => r.tableId === selectedTableId);
+            if (!tableRow) {
+              return <p className="text-white/50 text-xs">אין פעילות בשולחן זה</p>;
+            }
+            const sortedItems = [...tableRow.items].sort((a, b) => {
+              const order = (s: string) => (s === "ready" ? 0 : s === "pending" ? 1 : 2);
+              return order(a.status) - order(b.status);
+            });
+            return (
+              <>
+                {sortedItems.length === 0 ? (
+                  <p className="text-white/50 text-xs">עדיין לא הוזמן</p>
+                ) : (
+                  <>
+                    <ul className="space-y-1 text-[11px] text-white/90">
+                      {sortedItems.flatMap((line) =>
+                        Array.from({ length: line.quantity }, (_, idx) => {
+                          const statusLabel = line.status === "canceled" ? "בוטל" : line.status === "ready" ? "מוכן" : "לא מוכן";
+                          const isCanceled = line.status === "canceled";
+                          const unitPriceCents = line.status === "canceled" ? 0 : line.priceCents;
+                          return (
+                            <li key={`${line.itemId}-${idx}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <span className="whitespace-nowrap">{line.dishTitle}</span>
+                              {formatSelections(line.selections) && (
+                                <span className="text-white/60 text-[10px]">({formatSelections(line.selections)})</span>
+                              )}
+                              <span className="text-amber-200 tabular-nums whitespace-nowrap">
+                                {line.status === "canceled" ? "₪0" : `₪${formatPrice(unitPriceCents)}`}
+                              </span>
+                              <span className="ms-auto flex items-center gap-x-1.5">
+                                <ItemTimer status={line.status} submittedAt={line.submittedAt} readyAt={line.readyAt} />
+                                <span className={`text-[10px] ${isCanceled ? "text-red-400" : "text-white/50"}`}>({statusLabel})</span>
+                              </span>
+                            </li>
+                          );
+                        })
+                      )}
+                    </ul>
+                    <div className="flex items-center gap-2 text-white/95 text-xs font-semibold mt-1.5 pt-1.5 border-t border-white/10">
+                      <span>סה״כ</span>
+                      <span className="tabular-nums text-amber-200">₪{formatPrice(tableRow.totalCents)}</span>
+                    </div>
+                    <div className="flex gap-2 mt-1.5">
+                      <button
+                        type="button"
+                        className="px-2 py-1 rounded text-[11px] bg-white/10 text-white/80 hover:bg-white/15"
+                      >
+                        <Printer className="w-3 h-3 inline-block ml-1" />
+                        הדפס
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCloseTableClick(selectedTableId)}
+                        className="px-2 py-1 rounded text-[11px] bg-red-500/30 text-white hover:bg-red-500/50"
+                      >
+                        סגור חשבון
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </div>
+        </div>
+      )}
+
+      {/* מודאל אישור מחיקת חשבון */}
+      {closeTableConfirmTableId != null &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[105] flex items-center justify-center p-4" role="dialog" aria-label="אישור מחיקת חשבון">
+            <div
+              className="absolute inset-0 bg-black/70"
+              aria-hidden
+              onClick={() => setCloseTableConfirmTableId(null)}
+            />
+            <div
+              className="relative rounded-xl border border-white/10 bg-[#1a1d24] shadow-2xl p-6 flex flex-col items-center gap-5 min-w-[260px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-white text-center font-medium">האם למחוק את החשבון?</p>
+              <div className="flex gap-3 w-full justify-center">
+                <button
+                  type="button"
+                  onClick={handleConfirmCloseTable}
+                  className="px-5 py-2 rounded-lg font-medium text-white bg-emerald-600 hover:bg-emerald-500"
+                >
+                  כן
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCloseTableConfirmTableId(null)}
+                  className="px-5 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-500"
+                >
+                  לא
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* פופאפ קריאה למלצר */}
       {!waiterPopupDisabled &&
@@ -812,62 +1164,7 @@ export function ReceptionCabalaClient({
           document.body
         )}
 
-      {/* הזמנה ספציפית – רק כשיש שולחן נבחר */}
-      {selectedTableId != null && (
-        <div className="rounded-lg border border-white/10 bg-[#1a1d24] p-3 shrink-0 max-w-xl">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <h2 className="text-lg font-semibold text-white">שולחן {selectedTableLabel}</h2>
-            <button
-              type="button"
-              onClick={() => setSelectedTableId(null)}
-              className="text-xs text-white/50 hover:text-white shrink-0"
-            >
-              סגור
-            </button>
-          </div>
-          {callingWaiterTables.some((ct) => ct.tableId === selectedTableId) && (
-            <div className="flex justify-end mb-3" dir="rtl">
-              <div className="rounded-lg border border-amber-400 bg-amber-500 shadow shadow-amber-400/30 px-2 py-1.5 flex flex-col gap-1 w-max max-w-[140px]">
-                <div className="flex items-center gap-1 text-[#1a1d24] font-bold text-xs">
-                  <Bell className="w-3 h-3 shrink-0" strokeWidth={2.5} />
-                  <span>קרא למלצר</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleClearCallingWaiter(selectedTableId)}
-                  className="py-1 px-2 rounded text-[11px] font-medium text-amber-900 bg-amber-200 hover:bg-amber-300 border border-amber-600/40 transition-colors w-full"
-                >
-                  קיבלתי
-                </button>
-              </div>
-            </div>
-          )}
-          {tableOrders.length === 0 ? (
-            <p className="text-white/50 text-xs">אין הזמנות ממתינות לשולחן זה</p>
-          ) : (
-            <ul className="space-y-3">
-              {tableOrders.map((sub) => (
-                <li key={sub.id} className="border-t border-white/10 pt-2 first:border-t-0 first:pt-0">
-                  <p className="text-white/60 text-[11px] mb-0.5">{formatTime(sub.submittedAt)}</p>
-                  <p className="text-white/40 text-[11px] mb-1.5 tabular-nums">
-                    <BonTimer submittedAt={sub.submittedAt} alertAfterMinutes={alertAfterMinutes} />
-                  </p>
-                  <ul className="text-white text-sm font-medium space-y-0.5">
-                    {sub.items.map((i) => (
-                      <li key={i.id}>
-                        <span>{i.quantity} × {i.dishTitle}</span>
-                        {formatSelections(i.selections) && (
-                          <p className="text-white/55 text-[11px] font-normal mt-0.5">{formatSelections(i.selections)}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

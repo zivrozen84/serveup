@@ -6,6 +6,7 @@ import { DishExpansionModal, type DishForExpansion } from "./DishExpansionModal"
 import { BottomNavBar } from "./BottomNavBar";
 import { FlyingFoodDisc } from "./FlyingFoodDisc";
 import { CallWaiterModal } from "./CallWaiterModal";
+import { ChatPopup } from "./ChatPopup";
 import { useOrderSession } from "./OrderSessionContext";
 
 const PHONE_WIDTH = 420;
@@ -93,8 +94,12 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const [activeCat, setActiveCat] = useState(categories[0]?.id ?? null);
   const [expansionDish, setExpansionDish] = useState<DishForExpansion | null>(null);
   const onAddToCart = useCallback(
-    (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => {
-      orderSession?.addToCart(payload.dishId, payload.quantity, payload.priceCents, payload.selections);
+    async (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => {
+      if (!orderSession) return;
+      const qty = Math.max(1, Math.min(50, payload.quantity));
+      for (let i = 0; i < qty; i++) {
+        await orderSession.addToCart(payload.dishId, 1, payload.priceCents, payload.selections);
+      }
     },
     [orderSession]
   );
@@ -138,6 +143,7 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [flyToCart, setFlyToCart] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
   const [callWaiterOpen, setCallWaiterOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const flyResolveRef = useRef<(() => void) | null>(null);
   const cartCircleRef = useRef<HTMLSpanElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -300,6 +306,9 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
       showToast("קריאה למלצר זמינה רק כשנכנסים דרך לינק השולחן");
     }
   }, [orderSession, orderSlug, orderSessionToken, phoneLayout, forcePreview, showToast]);
+
+  const handleChatClick = useCallback(() => setChatOpen(true), []);
+
   const content = (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col menu-scalable" dir="rtl" style={contentStyle}>
       <div className="flex-1 flex flex-col min-h-0">
@@ -649,12 +658,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                 iconColor={bottomNavIconColor}
                 visible
                 onBellClick={(phoneLayout || forcePreview || (orderSession && orderSlug && orderSessionToken)) ? handleBellClick : undefined}
+                onChatClick={handleChatClick}
                 cartItemsCount={orderSession?.cartItems.length ?? 0}
                 cartLabel={orderSession ? "סיכום הזמנה" : undefined}
                 cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
                 cartCircleRef={cartCircleRef}
               />
             </div>
+            <ChatPopup open={chatOpen} onOpenChange={setChatOpen} embedInPhone restaurantSlug={restaurant.slug} />
             {expansionDish && canExpandDish && (
               <DishExpansionModal
                 open={!!expansionDish}
@@ -733,12 +744,14 @@ export function RestaurantMenu({ restaurant, categories, forcePreview, phoneLayo
                   iconColor={bottomNavIconColor}
                   visible
                   onBellClick={(phoneLayout || forcePreview || (orderSession && orderSlug && orderSessionToken)) ? handleBellClick : undefined}
+                  onChatClick={handleChatClick}
                   cartItemsCount={orderSession?.cartItems.length ?? 0}
                   cartLabel={orderSession ? "סיכום הזמנה" : undefined}
                   cartHref={orderSession ? `/r/${restaurant.slug}/order/${orderSession.token}/summary` : undefined}
                   cartCircleRef={cartCircleRef}
                 />
               </div>
+              <ChatPopup open={chatOpen} onOpenChange={setChatOpen} embedInPhone restaurantSlug={restaurant.slug} />
               {expansionDish && canExpandDish && (
                 <DishExpansionModal
                   open={!!expansionDish}

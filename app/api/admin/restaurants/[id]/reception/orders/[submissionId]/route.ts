@@ -25,6 +25,11 @@ export async function PATCH(
 
   await prisma.orderSubmission.update({
     where: { id: submissionId },
+    data: { status: "ready", readyAt: new Date() },
+  });
+
+  await prisma.orderSubmissionItem.updateMany({
+    where: { orderSubmissionId: submissionId, status: { not: "canceled" } },
     data: { status: "ready" },
   });
 

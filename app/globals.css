@@ -66,6 +66,29 @@ html:has([data-admin]) body {
   scrollbar-width: none;
 }
 
+/* גלילה כהה – מתאימה לרקע אדמין/קבלה */
+.scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.scrollbar-dark::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* תפריט – טקסט בסיס לגודל דינמי */
 .menu-scalable { font-size: var(--menu-base, 16px); }
 .menu-scalable .menu-text-xs { font-size: 0.75em; }

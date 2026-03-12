@@ -11,7 +11,7 @@ function formatPrice(cents: number): string {
 interface OrderCartDrawerProps {
   cartItems: CartItemDto[];
   onClose: () => void;
-  onUpdateQuantity: (itemId: number, quantity: number) => Promise<void>;
+  onDuplicate: (item: CartItemDto) => void;
   onRemove: (itemId: number) => Promise<void>;
   priceColor?: string;
 }
@@ -19,7 +19,7 @@ interface OrderCartDrawerProps {
 export function OrderCartDrawer({
   cartItems,
   onClose,
-  onUpdateQuantity,
+  onDuplicate,
   onRemove,
   priceColor = "#fffbeb",
 }: OrderCartDrawerProps) {
@@ -78,26 +78,17 @@ export function OrderCartDrawer({
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-white truncate">{item.dish.title}</p>
                   <p className="text-sm" style={{ color: priceColor }}>
-                    ₪{formatPrice(item.priceCents)} × {item.quantity}
+                    ₪{formatPrice(item.priceCents)}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                    className="w-8 h-8 rounded-full bg-white/20 text-white font-bold flex items-center justify-center"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center text-white font-medium">{item.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                    className="w-8 h-8 rounded-full bg-white/20 text-white font-bold flex items-center justify-center"
-                  >
-                    +
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onDuplicate(item)}
+                  className="w-8 h-8 rounded-full bg-white/20 text-white font-bold flex items-center justify-center shrink-0 leading-none -translate-y-0.5"
+                  aria-label="שכפל מנה"
+                >
+                  +
+                </button>
                 <button
                   type="button"
                   onClick={() => onRemove(item.id)}

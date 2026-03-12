@@ -15,15 +15,17 @@ function isDoor(t: Table) {
   return t.shape === "door" || t.label === "דלת";
 }
 
-// גודל שולחן באחוזים מהמפה (עורך מפה נשאר 100%; כאן קבלה – 94%)
-const TABLE_SCALE = 0.94;
+// ריבועים אחידים – גודל קטן יותר כדי שיהיו רווחים גדולים ביניהם
+const TABLE_SIZE = 6.4; // אחוזים מהמפה
 function tableSizePercent(t: Table) {
   const door = isDoor(t);
   const circle = t.shape === "circle";
-  if (door) return { w: 7.5 * TABLE_SCALE, h: 3.2 * TABLE_SCALE };
-  if (circle) return { w: 7 * TABLE_SCALE, h: 11.2 * TABLE_SCALE };
-  return { w: 8 * TABLE_SCALE, h: 9.6 * TABLE_SCALE };
+  if (door) return { w: 7.5, h: 3.2 };
+  if (circle) return { w: TABLE_SIZE, h: TABLE_SIZE };
+  return { w: TABLE_SIZE, h: TABLE_SIZE };
 }
+
+const CROP_MARGIN = 14; // רקע מסביב – ספייר גדול יותר למראה נקי
 
 interface ReceptionMapViewProps {
   tables: Table[];
@@ -31,6 +33,8 @@ interface ReceptionMapViewProps {
   selectedTableId: number | null;
   onSelectTable: (tableId: number | null) => void;
   ordersCountByTableId?: Record<number, number>;
+  /** שולחנות פעילים (לא נסגר חשבון) – נקדה ירוקה גם אם הכל מוכן */
+  activeTableIds?: Set<number>;
   /** שולחנות עם הזמנות שעברו את זמן ההתראה – תג אדום במקום צהוב */
   ordersAlertTableIds?: Set<number>;
   /** שולחנות שקוראים למלצר – צהוב, אפקט הגדלה, אייקון פעמון (הפופאפ מוצג בכרטיסיית השולחן) */
@@ -43,13 +47,39 @@ export function ReceptionMapView({
   selectedTableId,
   onSelectTable,
   ordersCountByTableId = {},
+  activeTableIds,
   ordersAlertTableIds,
   ordersCallingWaiterTableIds,
 }: ReceptionMapViewProps) {
+  // bounding box של כל השולחנות + ספייר – preview רק האזור הזה
+  const crop = (() => {
+    if (tables.length === 0) return { minX: 0, minY: 0, w: 100, h: 100 };
+    let minX = 100,
+      maxX = 0,
+      minY = 100,
+      maxY = 0;
+    for (const t of tables) {
+      const px = t.positionX ?? 50;
+      const py = t.positionY ?? 50;
+      const size = tableSizePercent(t);
+      minX = Math.min(minX, px - size.w / 2);
+      maxX = Math.max(maxX, px + size.w / 2);
+      minY = Math.min(minY, py - size.h / 2);
+      maxY = Math.max(maxY, py + size.h / 2);
+    }
+    minX = Math.max(0, minX - CROP_MARGIN);
+    maxX = Math.min(100, maxX + CROP_MARGIN);
+    minY = Math.max(0, minY - CROP_MARGIN);
+    maxY = Math.min(100, maxY + CROP_MARGIN);
+    const w = Math.max(maxX - minX, 20);
+    const h = Math.max(maxY - minY, 20);
+    return { minX, minY, w, h };
+  })();
+
   return (
     <div
       className="relative w-full rounded-xl border border-white/10 bg-[#1a1d24] overflow-hidden"
-      style={{ aspectRatio: "800 / 500" }}
+      style={{ aspectRatio: `${crop.w} / ${crop.h}` }}
     >
       {tables.map((t) => {
         const px = t.positionX ?? 50;
@@ -57,11 +87,18 @@ export function ReceptionMapView({
         const circle = t.shape === "circle";
         const door = isDoor(t);
         const label = t.label || String(t.tableNumber);
-        const hasOrders = (ordersCountByTableId[t.id] ?? 0) > 0;
+        const isActive = !door && (activeTableIds?.has(t.id) ?? false);
+        const pendingCount = ordersCountByTableId[t.id] ?? 0;
+        const hasOrders = pendingCount > 0;
         const isCallingWaiter = !door && ordersCallingWaiterTableIds?.has(t.id);
         const isAlert = !door && hasOrders && !isCallingWaiter && ordersAlertTableIds?.has(t.id);
         const selected = selectedTableId === t.id;
         const size = tableSizePercent(t);
+        // מיקום וגודל במערכת הקרופ: 0–100% בתוך המלבן של השולחנות+ספייר
+        const leftCrop = ((px - crop.minX) / crop.w) * 100;
+        const topCrop = ((py - crop.minY) / crop.h) * 100;
+        const widthCrop = (size.w / crop.w) * 100;
+        const heightCrop = (size.h / crop.h) * 100;
 
         const handleClick = () => {
           if (door) return;
@@ -77,22 +114,22 @@ export function ReceptionMapView({
               isCallingWaiter ? "animate-waiter-call hover:scale-110" : "hover:scale-105"
             }`}
             style={{
-              left: `${px}%`,
-              top: `${py}%`,
+              left: `${leftCrop}%`,
+              top: `${topCrop}%`,
               transform: "translate(-50%, -50%)",
-              width: `${size.w}%`,
-              height: `${size.h}%`,
+              width: `${widthCrop}%`,
+              height: `${heightCrop}%`,
               minWidth: "24px",
               minHeight: "24px",
             }}
           >
             <div
-                className={`relative w-full h-full flex flex-col items-center justify-center text-white font-bold border-2 text-[clamp(8px,1.8vw,14px)] leading-tight ${
+                className={`relative w-full h-full flex flex-col items-center justify-center text-white font-bold border-2 leading-tight ${
                   selected ? "ring-2 ring-white ring-offset-1 ring-offset-[#1a1d24]" : ""
-                } ${
+                }                 ${
                   isCallingWaiter
                     ? "shadow-lg shadow-amber-400/50 bg-amber-500"
-                    : !door && hasOrders
+                    : !door && (hasOrders || isActive)
                       ? isAlert
                         ? "shadow-lg shadow-red-500/40"
                         : "shadow-lg shadow-amber-500/30"
@@ -112,7 +149,7 @@ export function ReceptionMapView({
                     <Bell className="w-2.5 h-2.5" strokeWidth={2.5} />
                   </span>
                 )}
-              {!door && hasOrders && !isCallingWaiter && (
+              {!door && isActive && !isCallingWaiter && (
                 <span
                   className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse border border-[#1a1d24] z-10"
                   aria-hidden
@@ -129,7 +166,12 @@ export function ReceptionMapView({
                   {ordersCountByTableId[t.id]}
                 </span>
               )}
-              <span className={door ? "text-transparent" : ""}>{door ? "" : label || "?"}</span>
+              <span
+                className={door ? "text-transparent" : ""}
+                style={{ fontSize: "36px" }}
+              >
+                {door ? "" : label || "?"}
+              </span>
             </div>
           </button>
         );

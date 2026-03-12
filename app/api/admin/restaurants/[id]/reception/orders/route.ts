@@ -90,6 +90,7 @@ export async function GET(
         quantity: i.quantity,
         priceCents: i.priceCents,
         selections: i.selections,
+        status: (i as { status?: string }).status ?? "pending",
       })),
     }))
   );

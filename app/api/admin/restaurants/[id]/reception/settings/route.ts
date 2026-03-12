@@ -27,7 +27,7 @@ export async function GET(
   return NextResponse.json({
     receptionDontNotifyReady: r.receptionDontNotifyReady ?? false,
     receptionAutoDeleteMinutes: r.receptionAutoDeleteMinutes ?? 30,
-    receptionAlertAfterMinutes: r.receptionAlertAfterMinutes ?? 10,
+    receptionAlertAfterMinutes: r.receptionAlertAfterMinutes ?? null,
     receptionWaiterPopupDisabled: r.receptionWaiterPopupDisabled ?? false,
   });
 }

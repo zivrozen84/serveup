@@ -152,25 +152,28 @@ export function OrderSummaryPage({
     async (payload: { dishId: number; quantity: number; priceCents: number; selections?: unknown }) => {
       if (!editingCartItem || !orderSession) return;
       await orderSession.removeCartItem(editingCartItem.id);
-      await orderSession.addToCart(payload.dishId, payload.quantity, payload.priceCents, payload.selections);
+      const qty = Math.max(1, Math.min(50, payload.quantity));
+      for (let i = 0; i < qty; i++) {
+        await orderSession.addToCart(payload.dishId, 1, payload.priceCents, payload.selections);
+      }
       setEditingCartItem(null);
     },
     [editingCartItem, orderSession]
   );
+
+  if (!orderSession) return null;
+
+  const { cartItems, orderedItems, addToCart, removeCartItem, submitMyOrder } = orderSession;
+  const myTotalCents = cartItems.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
+  const orderedItemsCount = orderedItems.reduce((s, i) => s + i.quantity, 0);
+  const cartItemsCount = cartItems.reduce((s, i) => s + i.quantity, 0);
+  const orderedTotalCents = orderedItems.reduce((s, i) => s + i.priceCents * i.quantity, 0);
 
   const handleRemove = useCallback(async () => {
     if (!editingCartItem || !orderSession) return;
     await orderSession.removeCartItem(editingCartItem.id);
     setEditingCartItem(null);
   }, [editingCartItem, orderSession]);
-
-  if (!orderSession) return null;
-
-  const { cartItems, orderedItems, updateCartItemQuantity, removeCartItem, submitMyOrder } = orderSession;
-  const myTotalCents = cartItems.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
-  const orderedItemsCount = orderedItems.reduce((s, i) => s + i.quantity, 0);
-  const cartItemsCount = cartItems.reduce((s, i) => s + i.quantity, 0);
-  const orderedTotalCents = orderedItems.reduce((s, i) => s + i.priceCents * i.quantity, 0);
 
   const handleSubmitClick = useCallback(async () => {
     if (cartItems.length === 0) return;
@@ -212,7 +215,9 @@ export function OrderSummaryPage({
             <div className="flex-1 min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-2">
                 <p className="font-medium text-white text-sm flex-1 min-w-0 text-right">{item.dish.title}</p>
-                <span className="text-white/90 text-sm font-medium shrink-0">{item.quantity}</span>
+                {item.quantity > 1 && (
+                  <span className="text-white/90 text-sm font-medium shrink-0">{item.quantity}</span>
+                )}
               </div>
               {selectionLines.length > 0 ? (
                 <div className="text-xs mt-0.5 text-white/70 space-y-0.5">
@@ -238,7 +243,9 @@ export function OrderSummaryPage({
             <div className="flex-1 min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-2">
                 <p className="font-medium text-white text-sm flex-1 min-w-0 text-right">{item.dish.title}</p>
-                <span className="text-white/90 text-sm font-medium shrink-0">{item.quantity}</span>
+                {item.quantity > 1 && (
+                  <span className="text-white/90 text-sm font-medium shrink-0">{item.quantity}</span>
+                )}
               </div>
               {selectionLines.length > 0 ? (
                 <div className="text-xs mt-0.5 text-white/70 space-y-0.5">
@@ -254,39 +261,26 @@ export function OrderSummaryPage({
           </div>
         )}
         {editable && (
-          <div className="flex items-center justify-center gap-1 shrink-0">
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateCartItemQuantity(item.id, Math.max(0, item.quantity - 1));
-                }}
-                className="w-6 h-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center"
-              >
-                −
-              </button>
-              <span className="w-4 min-w-4 text-center text-white text-xs font-medium">
-                {item.quantity}
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateCartItemQuantity(item.id, Math.min(10, item.quantity + 1));
-                }}
-                className="w-6 h-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center"
-              >
-                +
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                removeCartItem(item.id);
+                addToCart(item.dishId, 1, item.priceCents, item.selections);
               }}
-              className="p-1 text-stone-400 hover:text-red-500 transition-colors rounded"
+              className="w-8 h-8 rounded-full bg-white/20 text-white text-lg font-bold flex items-center justify-center hover:bg-white/30 leading-none -translate-y-0.5"
+              aria-label="שכפל מנה"
+              title="הוסף עוד אחת כמו זו"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeCartItem((item as CartItemDto).id);
+              }}
+              className="p-1.5 text-stone-400 hover:text-red-500 transition-colors rounded"
               aria-label="הסר"
             >
               <TrashIcon className="w-4 h-4" />

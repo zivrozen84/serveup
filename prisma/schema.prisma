@@ -209,11 +209,12 @@ model CartItem {
 
 // הזמנה שנשלחה (הוזמן) – פריטים שעברו מ"סל שלי" לשליחה
 model OrderSubmission {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   orderSessionId Int
   guestId        String
-  submittedAt    DateTime @default(now())
-  status         String   @default("pending") // pending | ready – למסך הקבלה (הודיע מוכן)
+  submittedAt    DateTime  @default(now())
+  readyAt        DateTime? // כשסומן מוכן – לטפס זמן קפוא
+  status         String    @default("pending") // pending | ready – למסך הקבלה (הודיע מוכן)
 
   orderSession OrderSession        @relation(fields: [orderSessionId], references: [id], onDelete: Cascade)
   items        OrderSubmissionItem[]
@@ -228,6 +229,7 @@ model OrderSubmissionItem {
   quantity         Int    @default(1)
   priceCents       Int
   selections       Json?
+  status           String @default("pending") // pending | ready | canceled
 
   orderSubmission OrderSubmission @relation(fields: [orderSubmissionId], references: [id], onDelete: Cascade)
   dish            Dish            @relation(fields: [dishId], references: [id], onDelete: Cascade)
