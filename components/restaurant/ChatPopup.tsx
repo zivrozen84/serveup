@@ -3,8 +3,17 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-const OPENING_MESSAGE = "היי, אני צ'אטי, אני יכול לעזור לך לבחור מה לאכול, מה אתה אוהב או לא רוצה במנה שלך?";
+const OPENING_MESSAGE = "היי, אני אולי אוכל לנסות לך למצוא את המנה שלך! מה אתה אוהב?";
 const OPENING_TYPING_MS = 900;
+
+/** הצעות כשעדיין לא נשלחה הודעה – מעודדות לשאול על מנה מסוימת */
+const EMPTY_STATE_SUGGESTIONS = [
+  "יש מנה מסוימת?",
+  "יש מנה מסוימת שאתה אוהב?",
+  "מה אתה מחפש לאכול?",
+  "מה אתה ממליץ?",
+  "יש בלי גלוטן?",
+];
 const MIN_TYPING_AFTER_SEND_MS = 1200;
 const AVATAR_SIZE = 40;
 
@@ -46,7 +55,16 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
   const [pendingJumpDishId, setPendingJumpDishId] = useState<number | null>(null);
   const [pendingJumpDishTitle, setPendingJumpDishTitle] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingStartedAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!open) return;
+    setPendingJumpDishId(null);
+    setPendingJumpDishTitle(null);
+    const focusTimer = setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 100);
+    return () => clearTimeout(focusTimer);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -334,6 +352,9 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
             </div>
             <div
               ref={listRef}
+              role="log"
+              aria-live="polite"
+              aria-label="הודעות הצ'אט"
               className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide min-h-0"
             >
               {messages.map((msg) =>
@@ -355,7 +376,8 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                                       <button
                                         type="button"
                                         onClick={() => handleJumpFromMessage(msg.suggestedDishIdForJump!, msg.highlightTitle)}
-                                        className="animate-chat-jump-fade inline-flex align-middle mx-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0"
+                                        className="animate-chat-jump-fade inline-flex align-middle mx-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0 motion-reduce:animate-none"
+                                        aria-label="עבור למנה בתפריט"
                                       >
                                         עבור
                                       </button>
@@ -367,7 +389,8 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                                       <button
                                         type="button"
                                         onClick={() => handleJumpFromMessage(msg.suggestedDishIdForJump!, msg.highlightTitle)}
-                                        className="animate-chat-jump-fade inline-flex align-middle mr-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0"
+                                        className="animate-chat-jump-fade inline-flex align-middle mr-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0 motion-reduce:animate-none"
+                                        aria-label="עבור למנה בתפריט"
                                       >
                                         עבור
                                       </button>
@@ -381,6 +404,7 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                                     type="button"
                                     onClick={() => handleJumpFromMessage(msg.suggestedDishIdForJump!, msg.highlightTitle)}
                                     className="text-xs font-bold px-1.5 py-0.5 rounded bg-transparent text-amber-400 hover:text-amber-300 align-baseline"
+                                    aria-label="עבור למנה בתפריט"
                                   >
                                     עבור
                                   </button>
@@ -396,19 +420,20 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                             type="button"
                             onClick={() => handleRetry(msg.id, msg.retryUserText!)}
                             className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30"
+                            aria-label="נסה לשלוח שוב"
                           >
                             נסה שוב
                           </button>
                         </div>
                       )}
                     </div>
-                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center" aria-hidden>
                       <img src="/מלצר.png" alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} className="object-cover" />
                     </div>
                   </div>
                 ) : (
                   <div key={msg.id} className="flex justify-start gap-2 items-end">
-                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center" aria-hidden>
                       <img src="/לקוח.png" alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} className="object-cover" />
                     </div>
                     <div className="px-4 py-2.5 rounded-2xl rounded-br-md bg-emerald-600/80 text-white text-sm max-w-[85%]">
@@ -418,14 +443,31 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                 )
               )}
               {isTyping && (
-                <div className="flex justify-end gap-2 items-end">
+                <div className="flex justify-end gap-2 items-end" aria-live="polite" aria-label="היועץ מקליד">
                   <div className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-white/10 text-white/90 flex gap-1 items-center">
-                    <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce motion-reduce:animate-none" style={{ animationDelay: "0ms" }} />
+                    <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce motion-reduce:animate-none" style={{ animationDelay: "150ms" }} />
+                    <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce motion-reduce:animate-none" style={{ animationDelay: "300ms" }} />
                   </div>
                   <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center">
                     <img src="/מלצר.png" alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} className="object-cover" />
+                  </div>
+                </div>
+              )}
+              {!isTyping && messages.every((m) => m.role !== "user") && messages.length > 0 && (
+                <div className="pt-2 pb-1 flex flex-col gap-2 items-center" aria-label="הצעות לשאלה">
+                  <p className="text-xs text-white/50">למשל:</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {EMPTY_STATE_SUGGESTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setInputValue(s.slice(0, MAX_MESSAGE_LENGTH))}
+                        className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors border border-white/10"
+                      >
+                        {s}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -434,6 +476,7 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
               <div className="flex gap-2 items-end">
                 <div className="flex-1 flex flex-col gap-0.5">
                   <input
+                    ref={inputRef}
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
@@ -442,8 +485,10 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                     maxLength={MAX_MESSAGE_LENGTH}
                     className="px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm w-full"
                     dir="rtl"
+                    aria-label="הודעתך לצ'אט או שאלה על התפריט"
+                    autoComplete="off"
                   />
-                  <span className="text-[10px] text-white/40 text-left" dir="ltr">
+                  <span className="text-[10px] text-white/40 text-left" dir="ltr" aria-hidden>
                     {inputValue.length}/{MAX_MESSAGE_LENGTH}
                   </span>
                 </div>
@@ -451,7 +496,8 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                   type="button"
                   onClick={handleSend}
                   disabled={!inputValue.trim() || isTyping || inputValue.length > MAX_MESSAGE_LENGTH}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-500 transition-colors shrink-0"
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-500 transition-colors shrink-0 motion-reduce:transition-none"
+                  aria-label={isTyping ? "שולח הודעה" : "שלח הודעה"}
                 >
                   {isTyping ? "שולח..." : "שלח"}
                 </button>
@@ -494,6 +540,9 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
 
           <div
             ref={listRef}
+            role="log"
+            aria-live="polite"
+            aria-label="הודעות הצ'אט"
             className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
           >
             {messages.map((msg) =>
@@ -515,7 +564,8 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                                     <button
                                       type="button"
                                       onClick={() => handleJumpFromMessage(msg.suggestedDishIdForJump!, msg.highlightTitle)}
-                                      className="animate-chat-jump-fade inline-flex align-middle mx-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0"
+                                      className="animate-chat-jump-fade inline-flex align-middle mx-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0 motion-reduce:animate-none"
+                                      aria-label="עבור למנה בתפריט"
                                     >
                                       עבור
                                     </button>
@@ -527,7 +577,8 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                                     <button
                                       type="button"
                                       onClick={() => handleJumpFromMessage(msg.suggestedDishIdForJump!, msg.highlightTitle)}
-                                      className="animate-chat-jump-fade inline-flex align-middle mr-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0"
+                                      className="animate-chat-jump-fade inline-flex align-middle mr-1 px-2 py-1 rounded font-bold text-white bg-amber-500 hover:bg-amber-400 transition-colors shrink-0 motion-reduce:animate-none"
+                                      aria-label="עבור למנה בתפריט"
                                     >
                                       עבור
                                     </button>
@@ -541,6 +592,7 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                                   type="button"
                                   onClick={() => handleJumpFromMessage(msg.suggestedDishIdForJump!, msg.highlightTitle)}
                                   className="text-xs font-bold px-1.5 py-0.5 rounded bg-transparent text-amber-400 hover:text-amber-300 align-baseline"
+                                  aria-label="עבור למנה בתפריט"
                                 >
                                   עבור
                                 </button>
@@ -556,19 +608,20 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                           type="button"
                           onClick={() => handleRetry(msg.id, msg.retryUserText!)}
                           className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30"
+                          aria-label="נסה לשלוח שוב"
                         >
                           נסה שוב
                         </button>
                       </div>
                     )}
                   </div>
-                  <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center" aria-hidden>
                     <img src="/מלצר.png" alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} className="object-cover" />
                   </div>
                 </div>
               ) : (
                 <div key={msg.id} className="flex justify-start gap-2 items-end">
-                  <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center" aria-hidden>
                     <img src="/לקוח.png" alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} className="object-cover" />
                   </div>
                   <div className="px-4 py-2.5 rounded-2xl rounded-br-md bg-emerald-600/80 text-white text-sm max-w-[85%]">
@@ -578,14 +631,31 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
               )
             )}
             {isTyping && (
-              <div className="flex justify-end gap-2 items-end">
+              <div className="flex justify-end gap-2 items-end" aria-live="polite" aria-label="היועץ מקליד">
                 <div className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-white/10 text-white/90 flex gap-1 items-center">
-                  <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce motion-reduce:animate-none" style={{ animationDelay: "0ms" }} />
+                  <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce motion-reduce:animate-none" style={{ animationDelay: "150ms" }} />
+                  <span className="typing-dot w-2 h-2 rounded-full bg-white/70 animate-bounce motion-reduce:animate-none" style={{ animationDelay: "300ms" }} />
                 </div>
                 <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white/20 bg-stone-700 flex items-center justify-center">
                   <img src="/מלצר.png" alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} className="object-cover" />
+                </div>
+              </div>
+            )}
+            {!isTyping && messages.every((m) => m.role !== "user") && messages.length > 0 && (
+              <div className="pt-2 pb-1 flex flex-col gap-2 items-center" aria-label="הצעות לשאלה">
+                <p className="text-xs text-white/50">למשל:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {EMPTY_STATE_SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setInputValue(s.slice(0, MAX_MESSAGE_LENGTH))}
+                      className="px-3 py-1.5 rounded-full text-xs bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors border border-white/10"
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -595,6 +665,7 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
             <div className="flex gap-2 items-end">
               <div className="flex-1 flex flex-col gap-0.5">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
@@ -603,8 +674,10 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                   maxLength={MAX_MESSAGE_LENGTH}
                   className="px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm w-full"
                   dir="rtl"
+                  aria-label="הודעתך לצ'אט או שאלה על התפריט"
+                  autoComplete="off"
                 />
-                <span className="text-[10px] text-white/40 text-left" dir="ltr">
+                <span className="text-[10px] text-white/40 text-left" dir="ltr" aria-hidden>
                   {inputValue.length}/{MAX_MESSAGE_LENGTH}
                 </span>
               </div>
@@ -612,7 +685,8 @@ export function ChatPopup({ open, onOpenChange, embedInPhone, restaurantSlug, on
                 type="button"
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isTyping || inputValue.length > MAX_MESSAGE_LENGTH}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-500 transition-colors shrink-0"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-500 transition-colors shrink-0 motion-reduce:transition-none"
+                aria-label={isTyping ? "שולח הודעה" : "שלח הודעה"}
               >
                 {isTyping ? "שולח..." : "שלח"}
               </button>

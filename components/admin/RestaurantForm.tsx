@@ -796,14 +796,6 @@ export function RestaurantForm({
         <div className="flex flex-col gap-1">
           <Label className="text-xs">דיסקית נופלת</Label>
           <div className="flex items-center gap-4">
-            <Button
-              type="submit"
-              disabled={saving}
-              className="text-white hover:text-white hover:opacity-90 text-sm px-4 py-1.5 rounded-lg font-medium shrink-0"
-              style={{ backgroundColor: "#37C27D" }}
-            >
-              {saving ? "שומר..." : "שמור"}
-            </Button>
             <button
               type="button"
               onClick={() => setFlyingDiscVisibility((v) => ((v ?? 100) > 0 ? 0 : 100))}
@@ -813,6 +805,14 @@ export function RestaurantForm({
             >
               {(flyingDiscVisibility ?? 100) > 0 ? "פעיל" : "לא פעיל"}
             </button>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="text-white hover:text-white hover:opacity-90 text-sm px-4 py-1.5 rounded-lg font-medium shrink-0 mr-6"
+              style={{ backgroundColor: "#37C27D" }}
+            >
+              {saving ? "שומר..." : "שמור"}
+            </Button>
           </div>
         </div>
       </div>

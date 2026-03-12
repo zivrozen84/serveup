@@ -79,6 +79,7 @@ const SEARCH_STOP_WORDS = new Set([
   "משהו", "קצת", "איזה", "איזו", "על", "בשביל", "בשבילי", "לי", "אני", "את", "אתה",
   "היי", "הייי", "שלום", "הי", "אהלן",
   "ממליץ", "תמליץ", "המלצה", "המלץ", "מומלץ", "טעים",
+  "אוהב", "אוהבת", "אוהבים", "לאוהב",
 ]);
 
 /** קטגוריה של משקאות – לא להמליץ עליה */
@@ -239,12 +240,9 @@ function ruleBasedAdvisor(
   if (matchesInclDrinks.length > 0) {
     const onlyDrinks = matchesInclDrinks.filter((d) => isDrinkCategory(d.categoryName));
     if (onlyDrinks.length === matchesInclDrinks.length) {
-      return { message: `אין לנו מנות עם ${queryForDisplay} (רק משקאות). תרצה משהו אחר?` };
+      return { message: "לא הבנתי אותך, אתה יכול לשאול שוב או לכתוב דברים שאתה אוהב ואני אנסה לחפש." };
     }
   }
-
-  // לא נמצאה מנה – רק הודעה קצרה, בלי להמליץ ישר
-  return { message: `אין לנו מנה עם ${queryForDisplay} בתפריט. תרצה משהו אחר?` };
 
   // —— ללא בשר / צמחוני / טבעוני (בלי מחירים, בלי משקאות) ——
   if (matchIn(text, ["ללא בשר", "בלי בשר", "צמחוני", "טבעוני", "vegetarian", "vegan", "סלט", "ירקות"])) {
@@ -282,7 +280,7 @@ function ruleBasedAdvisor(
   if (/\b(תודה|תודה רבה|מעולה|בסדר|אוקיי|סגור|ביי|להתראות)\b/.test(text)) {
     return { message: pick([
       "בשמחה! אם תצטרך עוד – אני כאן.",
-      "בכיף. רוצה עוד משהו מהתפריט – write.",
+      "בכיף. רוצה עוד משהו מהתפריט – תכתוב.",
       "בשמחה 🙂",
     ]) };
   }
